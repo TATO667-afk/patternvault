@@ -19,10 +19,7 @@ export async function GET(
     const skin = await prisma.skin.findUnique({ where: { id } });
     if (!skin) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    // Fetch price history
-    const daysMap: Record<string, number> = {
-      "24h": 1, "7d": 7, "30d": 30, "90d": 90,
-    };
+    const daysMap: Record<string, number> = { "24h": 1, "7d": 7, "30d": 30, "90d": 90 };
     const days = daysMap[period] ?? 7;
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
@@ -31,18 +28,10 @@ export async function GET(
       orderBy: { date: "asc" },
     });
 
-    // Fetch live listings
-    const marketData = await fetchAllMarkets({
-      marketHashName: skin.marketHashName,
-      limit: 30,
-    });
+    const marketData = await fetchAllMarkets({ marketHashName: skin.marketHashName, limit: 30 });
 
-    // Fetch similar skins (same weapon)
     const similar = await prisma.skin.findMany({
-      where: {
-        weapon: skin.weapon,
-        id: { not: id },
-      },
+      where: { weapon: skin.weapon, id: { not: id } },
       take: 6,
     });
 
