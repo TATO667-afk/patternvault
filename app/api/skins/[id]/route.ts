@@ -5,9 +5,9 @@ import { fetchAllMarkets } from "@/lib/marketplaces";
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = params;
+  const { id } = await params;
   const { searchParams } = req.nextUrl;
   const period = searchParams.get("period") ?? "7d";
 
