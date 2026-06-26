@@ -14,7 +14,7 @@ const FEATURES = [
   { icon: Shield, title: "Free to use", desc: "No credit card required" },
 ];
 
-export default function LoginPage({
+export default async function LoginPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
