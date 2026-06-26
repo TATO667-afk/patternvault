@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  steamId       String    @unique
+  displayName   String
+  avatarUrl     String?
+  profileUrl    String?
+  email         String?   @unique
+  emailVerified DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  watchlists    Watchlist[]
+  priceAlerts   PriceAlert[]
+  searchHistory SearchHistory[]
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// ─── Market Data ─────────────────────────────────────────────────────────────
+
+model Marketplace {
+  id          String    @id @default(cuid())
+  slug        String    @unique // steam | csfloat | skinport | buff | dmarket | gamerpay
+  name        String
+  displayName String
+  logoUrl     String?
+  baseUrl     String
+  feePercent  Float     @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  listings    Listing[]
+
+  @@map("marketplaces")
+}
+
+model Skin {
+  id            String    @id @default(cuid())
+  marketHashName String   @unique
+  name          String
+  weapon        String
+  skin          String
+  imageUrl      String?
+  rarity        String?
+  type          String?   // Rifle | Pistol | Knife | Gloves | etc.
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  listings      Listing[]
+  priceHistory  PriceHistory[]
+  patterns      Pattern[]
+  watchlists    Watchlist[]
+  priceAlerts   PriceAlert[]
+  opportunities Opportunity[]
+  searchHistory SearchHistory[]
+
+  @@index([weapon])
+  @@index([name])
+  @@map("skins")
+}
+
+model Listing {
+  id            String      @id @default(cuid())
+  skinId        String
+  marketplaceId String
+  externalId    String?     // marketplace's own listing ID
+  price         Float       // in USD
+  currency      String      @default("USD")
+  floatValue    Float?
+  paintSeed     Int?        // Pattern ID
+  wear          String?     // Factory New | Minimal Wear | etc.
+  inspectLink   String?
+  imageUrl      String?
+  stickers      Json?       // [{name, imageUrl, slot, wear}]
+  isStatTrak    Boolean     @default(false)
+  isSouvenir    Boolean     @default(false)
+  listingUrl    String?
+  fetchedAt     DateTime    @default(now())
+  expiresAt     DateTime?
+
+  skin        Skin        @relation(fields: [skinId], references: [id])
+  marketplace Marketplace @relation(fields: [marketplaceId], references: [id])
+
+  @@unique([marketplaceId, externalId])
+  @@index([skinId])
+  @@index([price])
+  @@index([floatValue])
+  @@index([fetchedAt])
+  @@map("listings")
+}
+
+model PriceHistory {
+  id          String   @id @default(cuid())
+  skinId      String
+  date        DateTime
+  avgPrice    Float
+  minPrice    Float
+  maxPrice    Float
+  volume      Int      @default(0)
+  marketplace String?  // null = aggregate across all markets
+
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@unique([skinId, date, marketplace])
+  @@index([skinId, date])
+  @@map("price_history")
+}
+
+model Pattern {
+  id            String  @id @default(cuid())
+  skinId        String
+  paintSeed     Int
+  tier          String? // Blue Gem Tier 1, etc.
+  description   String?
+  rarityScore   Float?  // 0-100 rarity score
+  imageUrl      String?
+
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@unique([skinId, paintSeed])
+  @@index([skinId])
+  @@map("patterns")
+}
+
+// ─── Opportunities ───────────────────────────────────────────────────────────
+
+model Opportunity {
+  id               String   @id @default(cuid())
+  skinId           String
+  type             String   // arbitrage | underpriced | rare_pattern | low_float
+  sourceMarket     String
+  destMarket       String?
+  buyPrice         Float
+  sellPrice        Float?
+  expectedProfit   Float
+  profitPercent    Float
+  floatValue       Float?
+  paintSeed        Int?
+  listingUrl       String
+  score            Float    @default(0) // composite opportunity score
+  isActive         Boolean  @default(true)
+  expiresAt        DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@index([isActive, score])
+  @@index([type])
+  @@index([skinId])
+  @@map("opportunities")
+}
+
+// ─── User Features ───────────────────────────────────────────────────────────
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String
+  skinId    String
+  name      String?
+  notes     String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@unique([userId, skinId])
+  @@map("watchlists")
+}
+
+model PriceAlert {
+  id            String   @id @default(cuid())
+  userId        String
+  skinId        String
+  targetPrice   Float
+  condition     String   // below | above
+  marketplace   String?  // null = any marketplace
+  wear          String?
+  maxFloat      Float?
+  minFloat      Float?
+  patternId     Int?
+  isActive      Boolean  @default(true)
+  triggered     Boolean  @default(false)
+  triggeredAt   DateTime?
+  notifyEmail   Boolean  @default(true)
+  notifyBrowser Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skin Skin @relation(fields: [skinId], references: [id])
+
+  @@index([userId, isActive])
+  @@map("price_alerts")
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  skinId    String?
+  query     String
+  filters   Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  skin Skin? @relation(fields: [skinId], references: [id])
+
+  @@index([userId])
+  @@map("search_history")
+}
