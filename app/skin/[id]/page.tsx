@@ -39,7 +39,7 @@ interface SkinDetailData {
   fetchedAt: string;
 }
 
-export default function SkinDetailPage({ params }: { params: { id: string } }) {
+export default async function SkinDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const [data, setData] = useState<SkinDetailData | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<PriceHistoryPeriod>("7d");
