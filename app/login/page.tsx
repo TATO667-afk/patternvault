@@ -25,7 +25,7 @@ export default async function LoginPage({
     profile_failed: "Could not fetch your Steam profile.",
   };
 
-  const errorMessage = (await searchParams).error ? errors[(await searchParams).error] : null;
+  const sp = await searchParams;`n  const errorMessage = sp.error ? (errors[sp.error] ?? null) : null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
