@@ -9,13 +9,13 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://patternvault.vercel.app"),
-  title: { default: "PatternVault – CS2 Skin Market Compare", template: "%s | PatternVault" },
+  title: { default: "PatternVault ï¿½ CS2 Skin Market Compare", template: "%s | PatternVault" },
   description: "Find the best CS2 skin prices across Steam, CSFloat, Skinport, Buff, DMarket and GamerPay.",
   keywords: ["CS2", "Counter-Strike 2", "skin market", "price compare", "CSFloat", "Skinport"],
   openGraph: {
     type: "website",
     siteName: "PatternVault",
-    title: "PatternVault – CS2 Skin Market Compare",
+    title: "PatternVault ï¿½ CS2 Skin Market Compare",
     description: "Find the best CS2 skin prices across all major marketplaces.",
   },
   robots: { index: true, follow: true },
@@ -52,7 +52,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="min-h-[calc(100vh-64px)]">{children}</main>
         <footer className="border-t border-[#222222] py-8 text-center text-xs text-gray-500">
           <p>PatternVault is not affiliated with Valve Corporation or any marketplace.</p>
-          <p className="mt-1">© {new Date().getFullYear()} PatternVault</p>
+          <p className="mt-1">ï¿½ {new Date().getFullYear()} PatternVault</p>
         </footer>
       </body>
     </html>
