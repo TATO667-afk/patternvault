@@ -17,7 +17,7 @@ const FEATURES = [
 export default function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: Promise<{ error?: string }>;
 }) {
   const errors: Record<string, string> = {
     invalid: "Steam verification failed. Please try again.",
@@ -25,7 +25,7 @@ export default function LoginPage({
     profile_failed: "Could not fetch your Steam profile.",
   };
 
-  const errorMessage = searchParams.error ? errors[searchParams.error] : null;
+  const errorMessage = (await searchParams).error ? errors[(await searchParams).error] : null;
 
   return (
     <div className="min-h-[calc(100vh-64px)] flex items-center justify-center px-4">
