@@ -37,7 +37,7 @@ export const metadata: Metadata = {
 
 async function getCurrentUser() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get("pv_session")?.value;
     if (!token) return null;
 
