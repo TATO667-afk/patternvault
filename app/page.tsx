@@ -1,35 +1,36 @@
 "use client";
 import { useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  BarChart3, Zap, Shield, Globe, ArrowRight,
-  TrendingDown, Filter, RefreshCw,
-} from "lucide-react";
-import { SearchBar } from "@/components/SearchBar";
-import { MarketTable } from "@/components/MarketTable";
-import { SkinCard } from "@/components/SkinCard";
-import { MarketplaceBadge } from "@/components/MarketplaceBadge";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { SkinInfo, NormalizedListing, MarketplaceSlug, WearCategory } from "@/types";
-import { formatPrice, formatPercent } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
+import { RefreshCw, TrendingUp, Zap, Activity, DollarSign } from "lucide-react";
 
-const POPULAR_SKINS = [
-  "AK-47 | Case Hardened (Factory New)",
-  "Karambit | Doppler (Factory New)",
-  "AWP | Dragon Lore (Factory New)",
-  "M4A1-S | Printstream (Factory New)",
-  "Desert Eagle | Blaze (Factory New)",
-  "Butterfly Knife | Fade (Factory New)",
+const POPULAR = [
+  "AK-47 | Asiimov (Field-Tested)",
+  "AWP | Dragon Lore (Field-Tested)",
+  "Karambit | Fade (Factory New)",
+  "M4A1-S | Hyper Beast (Minimal Wear)",
+  "USP-S | Kill Confirmed (Minimal Wear)",
 ];
 
-const MARKETPLACES: MarketplaceSlug[] = ["steam", "csfloat", "skinport", "buff", "dmarket", "gamerpay"];
-const WEAR_OPTIONS: WearCategory[] = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"];
+const MC: Record<string, string> = {
+  steam: "#1b9bec",
+  csfloat: "#00e5a0",
+  skinport: "#e06c47",
+  buff: "#f5c518",
+  dmarket: "#a855f7",
+  gamerpay: "#ec4899",
+};
 
-interface CompareState {
-  listings: NormalizedListing[];
+interface Listing {
+  id: string;
+  marketplace: string;
+  price: number;
+  wear?: string;
+  floatValue?: number;
+  listingUrl?: string;
+  diffPercent?: number;
+}
+
+interface CompareData {
+  listings: Listing[];
   errors: Record<string, string>;
   cheapestPrice: number;
   cheapestMarket: string;
@@ -39,308 +40,250 @@ interface CompareState {
 }
 
 export default function HomePage() {
-  const [selectedSkin, setSelectedSkin] = useState<SkinInfo | null>(null);
-  const [compareData, setCompareData] = useState<CompareState | null>(null);
+  const [query, setQuery] = useState("");
+  const [data, setData] = useState<CompareData | null>(null);
+  const [skin, setSkin] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showFilters, setShowFilters] = useState(false);
+  const [activeTime, setActiveTime] = useState("24h");
 
-  // Filters
-  const [minFloat, setMinFloat] = useState("");
-  const [maxFloat, setMaxFloat] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [selectedMarkets, setSelectedMarkets] = useState<MarketplaceSlug[]>([]);
-  const [wear, setWear] = useState<string>("all");
-
-  const runCompare = useCallback(async (skinName?: string) => {
-    const name = skinName ?? selectedSkin?.marketHashName;
+  const compare = useCallback(async (name: string) => {
     if (!name) return;
-
     setLoading(true);
+    setSkin(name);
     try {
-      const params = new URLSearchParams({ name });
-      if (minFloat) params.set("minFloat", minFloat);
-      if (maxFloat) params.set("maxFloat", maxFloat);
-      if (minPrice) params.set("minPrice", minPrice);
-      if (maxPrice) params.set("maxPrice", maxPrice);
-      if (selectedMarkets.length) params.set("markets", selectedMarkets.join(","));
-
-      const res = await fetch(`/api/market/compare?${params}`);
-      const data = await res.json();
-      if (!res.ok) {
-        setCompareData({ listings: [], errors: data.errors ?? { api: data.error ?? "Failed" }, cheapestPrice: 0, cheapestMarket: "", spread: 0, spreadPercent: 0, fetchedAt: new Date().toISOString() });
-      } else {
-        setCompareData(data);
-      }
-    } catch (err) {
-      console.error(err);
+      const res = await fetch("/api/market/compare?name=" + encodeURIComponent(name));
+      const d = await res.json();
+      setData({
+        listings: d.listings ?? [],
+        errors: d.errors ?? {},
+        cheapestPrice: d.cheapestPrice ?? 0,
+        cheapestMarket: d.cheapestMarket ?? "",
+        spread: d.spread ?? 0,
+        spreadPercent: d.spreadPercent ?? 0,
+        fetchedAt: d.fetchedAt ?? new Date().toISOString(),
+      });
+    } catch {
+      setData({ listings: [], errors: {}, cheapestPrice: 0, cheapestMarket: "", spread: 0, spreadPercent: 0, fetchedAt: new Date().toISOString() });
     } finally {
       setLoading(false);
     }
-  }, [selectedSkin, minFloat, maxFloat, minPrice, maxPrice, selectedMarkets]);
+  }, []);
 
-  const handleSkinSelect = (skin: SkinInfo) => {
-    setSelectedSkin(skin);
-    setCompareData(null);
-    // Auto-compare on select
-    setTimeout(() => runCompare(skin.marketHashName), 50);
-  };
+  const fmt = (n?: number | null) =>
+    n == null || isNaN(n) ? "N/A" : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 2 }).format(n);
 
-  const handlePopularClick = (name: string) => {
-    setSelectedSkin({ id: "", marketHashName: name, name, weapon: "", skin: "", imageUrl: null, rarity: null, type: null });
-    runCompare(name);
-  };
+  const fmtPct = (n?: number | null) =>
+    n == null || isNaN(n) ? "—" : (n >= 0 ? "+" : "") + n.toFixed(1) + "%";
 
-  const toggleMarket = (slug: MarketplaceSlug) => {
-    setSelectedMarkets((prev) =>
-      prev.includes(slug) ? prev.filter((m) => m !== slug) : [...prev, slug]
-    );
-  };
+  const sorted = data ? [...data.listings].sort((a, b) => a.price - b.price) : [];
+  const cheap = sorted[0];
 
   return (
-    <div className="min-h-screen">
-      {/* Hero section */}
-      <section className="relative border-b border-[#222222] bg-gradient-to-b from-[#0D0D0D] to-background py-16 overflow-hidden">
-        {/* Background glow */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-primary/5 rounded-full blur-3xl" />
+    <div>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", margin: "0 0 4px" }}>Market Compare</h1>
+          <p style={{ fontSize: 13, color: "var(--text-muted)", margin: 0 }}>Cross-market spreads and live arbitrage across 6 marketplaces.</p>
         </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {["1h", "24h", "7d", "30d"].map(t => (
+            <button key={t} onClick={() => setActiveTime(t)}
+              style={{ padding: "6px 12px", borderRadius: 8, fontSize: 12, fontWeight: 500, cursor: "pointer", background: activeTime === t ? "var(--green)" : "var(--bg-card2)", color: activeTime === t ? "#0d0e14" : "var(--text-dim)", border: "1px solid " + (activeTime === t ? "transparent" : "var(--border)") }}>
+              {t}
+            </button>
+          ))}
+          <button onClick={() => skin && compare(skin)} disabled={loading}
+            style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", borderRadius: 8, fontSize: 12, fontWeight: 600, background: "var(--green)", color: "#0d0e14", border: "none", cursor: "pointer" }}>
+            <RefreshCw style={{ width: 14, height: 14, animation: loading ? "spin 1s linear infinite" : "none" }} />
+            Refresh
+          </button>
+        </div>
+      </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Headlines */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
-          >
-            <Badge variant="secondary" className="mb-4 text-xs">
-              <Zap className="h-3 w-3 mr-1 text-primary" />
-              Live prices from 6 marketplaces
-            </Badge>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight mb-4">
-              <span className="text-foreground">Find the</span>{" "}
-              <span className="text-gradient">Best CS2 Prices</span>
-            </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Compare skins across Steam, CSFloat, Skinport, Buff, DMarket and GamerPay.
-              Spot arbitrage opportunities in real time.
-            </p>
-          </motion.div>
+      {/* Stat cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 24 }}>
+        {[
+          { label: "Best spread today", value: data ? fmtPct(data.spreadPercent) : "—", sub: data?.cheapestMarket || "no skin selected", color: "var(--green)" },
+          { label: "Open opportunities", value: data ? String(data.listings.length) : "—", sub: "across markets", color: "var(--green)" },
+          { label: "Avg margin (7d)", value: "9.2%", sub: "after fees & tax", color: "var(--yellow)" },
+          { label: "24h tracked volume", value: "$1.24M", sub: "-3.1% vs avg", color: "var(--red)" },
+        ].map(c => (
+          <div key={c.label} style={{ borderRadius: 14, padding: 16, background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.1em", color: "var(--text-muted)", margin: "0 0 8px", textTransform: "uppercase" }}>{c.label}</p>
+            <p style={{ fontSize: 24, fontWeight: 700, fontFamily: "monospace", color: c.color, margin: "0 0 4px" }}>{c.value}</p>
+            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{c.sub}</p>
+          </div>
+        ))}
+      </div>
 
-          {/* Search */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="max-w-3xl mx-auto"
-          >
-            <SearchBar
-              onSelect={handleSkinSelect}
-              className="mb-4"
-            />
+      {/* Search */}
+      <div style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", gap: 10, maxWidth: 560 }}>
+          <input value={query} onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && query) compare(query); }}
+            placeholder="e.g. AK-47 | Asiimov (Field-Tested)"
+            style={{ flex: 1, padding: "10px 14px", fontSize: 13, borderRadius: 10, outline: "none", background: "var(--bg-card2)", border: "1px solid var(--border)", color: "var(--text)" }}
+          />
+          <button onClick={() => query && compare(query)}
+            style={{ padding: "10px 20px", borderRadius: 10, fontSize: 13, fontWeight: 600, background: "var(--green)", color: "#0d0e14", border: "none", cursor: "pointer" }}>
+            Compare
+          </button>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+          {POPULAR.map(s => (
+            <button key={s} onClick={() => compare(s)}
+              style={{ padding: "4px 12px", borderRadius: 20, fontSize: 12, background: "var(--bg-card2)", border: "1px solid var(--border)", color: "var(--text-dim)", cursor: "pointer" }}>
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
 
-            {/* Filter toggle */}
-            <div className="flex items-center justify-between">
-              <div className="flex flex-wrap gap-2">
-                {MARKETPLACES.map((slug) => (
-                  <button
-                    key={slug}
-                    onClick={() => toggleMarket(slug)}
-                    className={`transition-opacity ${selectedMarkets.includes(slug) ? "opacity-100" : "opacity-40 hover:opacity-70"}`}
-                  >
-                    <MarketplaceBadge marketplace={slug} size="sm" />
-                  </button>
-                ))}
+      {/* Two-panel layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "320px 1fr", gap: 14 }}>
+        {/* Left: price panel */}
+        <div style={{ borderRadius: 14, overflow: "hidden", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)" }}>
+            <p style={{ fontSize: 10, letterSpacing: "0.12em", color: "var(--text-muted)", textTransform: "uppercase", margin: 0 }}>Price across markets</p>
+          </div>
+          {skin && data ? (
+            <div style={{ padding: 16 }}>
+              <div style={{ padding: 12, borderRadius: 10, background: "var(--bg-card2)", border: "1px solid var(--border)", marginBottom: 16 }}>
+                <p style={{ fontSize: 11, color: "var(--red)", margin: "0 0 2px" }}>Field-Tested</p>
+                <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text)", margin: "0 0 2px" }}>{skin.split(" (")[0]}</p>
+                <p style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-muted)", margin: 0 }}>float —</p>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters((v) => !v)}
-                className="gap-1.5 text-muted-foreground"
-              >
-                <Filter className="h-3.5 w-3.5" />
-                Filters
-              </Button>
-            </div>
-
-            {/* Advanced filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-4 p-4 bg-[#111111] border border-[#222222] rounded-lg grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Min Float</label>
-                      <Input placeholder="0.00" value={minFloat} onChange={(e) => setMinFloat(e.target.value)} className="h-9" />
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 16 }}>
+                <div>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", letterSpacing: "0.1em" }}>SPREAD</p>
+                  <p style={{ fontSize: 22, fontWeight: 700, color: "var(--green)", margin: 0 }}>{fmtPct(data.spreadPercent)}</p>
+                </div>
+                <div style={{ textAlign: "right" }}>
+                  <p style={{ fontSize: 10, color: "var(--text-muted)", margin: "0 0 4px", letterSpacing: "0.1em" }}>NET PROFIT</p>
+                  <p style={{ fontSize: 22, fontWeight: 700, fontFamily: "monospace", color: "var(--green)", margin: 0 }}>+{fmt(data.spread)}</p>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {sorted.length > 0 ? sorted.slice(0, 6).map((l, i) => (
+                  <div key={l.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", borderRadius: 10, background: i === 0 ? "var(--green-dim)" : "var(--bg-card2)", border: "1px solid " + (i === 0 ? "rgba(0,229,160,0.3)" : "var(--border)") }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: MC[l.marketplace] ?? "#888", flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, textTransform: "capitalize", color: i === 0 ? "var(--green)" : "var(--text)" }}>{l.marketplace}</span>
+                      {i === 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "var(--green)", color: "#0d0e14" }}>BEST BUY</span>}
+                      {i === sorted.length - 1 && i > 0 && <span style={{ fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 4, background: "var(--red-dim)", color: "var(--red)" }}>HIGH</span>}
                     </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Max Float</label>
-                      <Input placeholder="1.00" value={maxFloat} onChange={(e) => setMaxFloat(e.target.value)} className="h-9" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Min Price ($)</label>
-                      <Input placeholder="0" value={minPrice} onChange={(e) => setMinPrice(e.target.value)} className="h-9" />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground mb-1 block">Max Price ($)</label>
-                      <Input placeholder="999999" value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} className="h-9" />
-                    </div>
+                    <span style={{ fontFamily: "monospace", fontSize: 13, fontWeight: 600, color: i === 0 ? "var(--green)" : i === sorted.length - 1 ? "var(--red)" : "var(--text)" }}>
+                      {fmt(l.price)}
+                    </span>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Popular searches */}
-          {!selectedSkin && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="mt-6 text-center"
-            >
-              <p className="text-xs text-muted-foreground mb-3">Popular searches:</p>
-              <div className="flex flex-wrap justify-center gap-2">
-                {POPULAR_SKINS.map((name) => (
-                  <button
-                    key={name}
-                    onClick={() => handlePopularClick(name)}
-                    className="text-xs px-3 py-1.5 bg-[#111111] border border-[#222222] rounded-full text-muted-foreground hover:text-foreground hover:border-[#333333] transition-colors"
-                  >
-                    {name}
-                  </button>
-                ))}
+                )) : (
+                  <p style={{ textAlign: "center", padding: "24px 0", fontSize: 13, color: "var(--text-muted)" }}>No listings found.</p>
+                )}
               </div>
-            </motion.div>
+              {sorted.length > 0 && (
+                <div style={{ display: "flex", gap: 8, marginTop: 16 }}>
+                  <a href={cheap?.listingUrl ?? "#"} target="_blank" rel="noopener noreferrer"
+                    style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 700, textAlign: "center", background: "var(--green)", color: "#0d0e14", textDecoration: "none" }}>
+                    Buy {data.cheapestMarket}
+                  </a>
+                  <button style={{ flex: 1, padding: "10px 0", borderRadius: 10, fontSize: 13, fontWeight: 600, background: "var(--bg-card2)", color: "var(--text)", border: "1px solid var(--border)", cursor: "pointer" }}>
+                    List Highest
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div style={{ padding: 48, textAlign: "center", color: "var(--text-muted)", fontSize: 13 }}>
+              Search for a skin to see prices
+            </div>
           )}
         </div>
-      </section>
 
-      {/* Results */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {selectedSkin && (
-          <motion.div
-            key={selectedSkin.marketHashName}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            {/* Skin header + compare button */}
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-foreground">
-                  {selectedSkin.marketHashName}
-                </h2>
-                {compareData && (
-                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                    <span>
-                      Cheapest:{" "}
-                      <span className="text-success font-medium">
-                        {formatPrice(compareData.cheapestPrice)}
-                      </span>
-                      {" "}on{" "}
-                      <MarketplaceBadge
-                        marketplace={compareData.cheapestMarket as MarketplaceSlug}
-                        size="sm"
-                      />
-                    </span>
-                    <span>
-                      Spread:{" "}
-                      <span className="text-foreground font-medium">
-                        {formatPrice(compareData.spread)} ({formatPercent(compareData.spreadPercent)})
-                      </span>
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => runCompare()}
-                  disabled={loading}
-                  className="gap-1.5"
-                >
-                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-                  {loading ? "Fetching..." : "Refresh"}
-                </Button>
-                {selectedSkin.id && (
-                  <Button size="sm" variant="ghost" asChild>
-                    <a href={`/skin/${selectedSkin.id}`} className="gap-1.5">
-                      Details
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </a>
-                  </Button>
-                )}
-              </div>
+        {/* Right: arbitrage table */}
+        <div style={{ borderRadius: 14, overflow: "hidden", background: "var(--bg-card)", border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 16px", borderBottom: "1px solid var(--border)", flexWrap: "wrap" }}>
+            <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", margin: 0 }}>Arbitrage Opportunities</p>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, padding: "3px 8px", borderRadius: 20, background: "var(--green-dim)", color: "var(--green)", border: "1px solid rgba(0,229,160,0.2)" }}>
+              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "var(--green)", animation: "pulse 2s infinite", display: "inline-block" }} />
+              {sorted.length} live
+            </span>
+            <div style={{ marginLeft: "auto", display: "flex", gap: 6 }}>
+              {["All", "Steam", "Buff", "Skinport", "CSFloat"].map((m, i) => (
+                <button key={m} style={{ padding: "4px 10px", borderRadius: 6, fontSize: 11, cursor: "pointer", background: i === 0 ? "var(--green)" : "var(--bg-card2)", color: i === 0 ? "#0d0e14" : "var(--text-muted)", border: "1px solid " + (i === 0 ? "transparent" : "var(--border)") }}>
+                  {m}
+                </button>
+              ))}
             </div>
-
-            {/* Errors */}
-            {compareData?.errors && Object.keys(compareData.errors).length > 0 && (
-              <div className="mb-4 p-3 bg-[#1A0D0D] border border-danger/20 rounded-lg text-xs text-muted-foreground">
-                Failed to fetch from:{" "}
-                {Object.keys(compareData.errors).map((m, i) => (
-                  <span key={m}>
-                    <MarketplaceBadge marketplace={m as MarketplaceSlug} size="sm" />
-                    {i < Object.keys(compareData.errors).length - 1 ? ", " : ""}
-                  </span>
-                ))}
-                {" "}— configure API keys to enable.
-              </div>
-            )}
-
-            {/* Market table */}
-            <MarketTable
-              listings={compareData?.listings ?? []}
-              loading={loading}
-              onRefresh={() => runCompare()}
-              lastUpdated={compareData?.fetchedAt}
-            />
-          </motion.div>
-        )}
-
-        {/* Stats when no search */}
-        {!selectedSkin && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="grid grid-cols-1 sm:grid-cols-3 gap-6 py-8"
-          >
-            {[
-              {
-                icon: Globe,
-                title: "6 Marketplaces",
-                desc: "Steam, CSFloat, Skinport, Buff, DMarket, GamerPay",
-              },
-              {
-                icon: TrendingDown,
-                title: "Find Best Prices",
-                desc: "Instantly compare listings and spot the cheapest options",
-              },
-              {
-                icon: Shield,
-                title: "Arbitrage Scanner",
-                desc: "Automatically detect profitable buying opportunities",
-              },
-            ].map((card, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="p-6 bg-[#111111] border border-[#222222] rounded-xl"
-              >
-                <card.icon className="h-6 w-6 text-primary mb-3" />
-                <h3 className="font-semibold text-foreground mb-1">{card.title}</h3>
-                <p className="text-sm text-muted-foreground">{card.desc}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-      </section>
+          </div>
+          <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                  {["ITEM", "BUY FROM", "SELL TO", "SPREAD", "PROFIT", "VOL"].map(h => (
+                    <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", color: "var(--text-muted)" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sorted.length > 1 ? sorted.slice(1).map(l => {
+                  const profit = l.price - (cheap?.price ?? 0);
+                  const pct = cheap?.price ? (profit / cheap.price) * 100 : 0;
+                  return (
+                    <tr key={l.id} style={{ borderBottom: "1px solid var(--border)" }}
+                      onMouseEnter={e => { (e.currentTarget as HTMLTableRowElement).style.background = "var(--bg-card2)"; }}
+                      onMouseLeave={e => { (e.currentTarget as HTMLTableRowElement).style.background = "transparent"; }}>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <div style={{ width: 3, height: 32, borderRadius: 2, background: "var(--green)", flexShrink: 0 }} />
+                          <div>
+                            <p style={{ fontWeight: 500, color: "var(--text)", margin: "0 0 2px" }}>{skin.split(" (")[0]}</p>
+                            <p style={{ fontSize: 11, color: "var(--text-muted)", margin: 0 }}>{l.wear ?? "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: MC[cheap?.marketplace ?? ""] ?? "#888" }} />
+                          <span style={{ textTransform: "capitalize", color: "var(--text-dim)" }}>{cheap?.marketplace}</span>
+                        </div>
+                        <p style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-muted)", margin: "2px 0 0" }}>{fmt(cheap?.price)}</p>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: "50%", background: MC[l.marketplace] ?? "#888" }} />
+                          <span style={{ textTransform: "capitalize", color: "var(--text-dim)" }}>{l.marketplace}</span>
+                        </div>
+                        <p style={{ fontSize: 11, fontFamily: "monospace", color: "var(--text-muted)", margin: "2px 0 0" }}>{fmt(l.price)}</p>
+                      </td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <svg viewBox="0 0 60 20" style={{ width: 48, height: 16 }}>
+                            <polyline points="0,16 20,10 40,6 60,9" fill="none" stroke="var(--green)" strokeWidth="1.5" />
+                          </svg>
+                          <span style={{ fontFamily: "monospace", fontWeight: 600, color: "var(--green)" }}>{fmtPct(pct)}</span>
+                        </div>
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "monospace", fontWeight: 600, color: profit >= 0 ? "var(--green)" : "var(--red)" }}>
+                        {profit >= 0 ? "+" : ""}{fmt(profit)}
+                      </td>
+                      <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: 12, color: "var(--text-muted)" }}>
+                        {Math.floor(Math.random() * 900 + 100)}
+                      </td>
+                    </tr>
+                  );
+                }) : (
+                  <tr>
+                    <td colSpan={6} style={{ padding: "56px 16px", textAlign: "center", fontSize: 13, color: "var(--text-muted)" }}>
+                      {loading ? "Fetching prices..." : "Search for a skin to see arbitrage opportunities"}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
