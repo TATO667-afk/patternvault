@@ -6,12 +6,8 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// ─── Price Formatting ─────────────────────────────────────────────────────────
-
-export function formatPrice(
-  price: number,
-  currency: string = "USD"
-): string {
+export function formatPrice(price: number | undefined | null, currency: string = "USD"): string {
+  if (price == null || isNaN(price)) return "N/A";
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
@@ -20,16 +16,16 @@ export function formatPrice(
   }).format(price);
 }
 
-export function formatPercent(value: number, decimals: number = 1): string {
+export function formatPercent(value: number | undefined | null, decimals: number = 1): string {
+  if (value == null || isNaN(value)) return "N/A";
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(decimals)}%`;
 }
 
-export function formatFloat(value: number): string {
+export function formatFloat(value: number | undefined | null): string {
+  if (value == null || isNaN(value)) return "N/A";
   return value.toFixed(10).replace(/0+$/, "").padEnd(4, "0");
 }
-
-// ─── Float / Wear ─────────────────────────────────────────────────────────────
 
 export function floatToWear(float: number): WearCategory {
   if (float < 0.07) return "Factory New";
@@ -55,8 +51,6 @@ export const WEAR_ABBREV: Record<WearCategory, string> = {
   "Battle-Scarred": "BS",
 };
 
-// ─── Profit Calculation ───────────────────────────────────────────────────────
-
 export function calculateProfit(
   buyPrice: number,
   sellPrice: number,
@@ -67,8 +61,6 @@ export function calculateProfit(
   const profitPercent = (profit / buyPrice) * 100;
   return { profit, profitPercent, netSell };
 }
-
-// ─── Market Hash Name Parsing ─────────────────────────────────────────────────
 
 export function parseMarketHashName(name: string): {
   weapon: string;
@@ -82,46 +74,37 @@ export function parseMarketHashName(name: string): {
   const isSouvenir = clean.startsWith("Souvenir ");
   if (isStatTrak) clean = clean.replace("StatTrak™ ", "");
   if (isSouvenir) clean = clean.replace("Souvenir ", "");
-
   const wearMatch = clean.match(/\(([^)]+)\)$/);
   const wear = wearMatch ? (wearMatch[1] as WearCategory) : undefined;
   if (wearMatch) clean = clean.replace(` (${wearMatch[1]})`, "");
-
   const pipeIdx = clean.indexOf(" | ");
   const weapon = pipeIdx !== -1 ? clean.slice(0, pipeIdx) : clean;
   const skin = pipeIdx !== -1 ? clean.slice(pipeIdx + 3) : "";
-
   return { weapon, skin, wear, isStatTrak, isSouvenir };
 }
-
-// ─── Rarity Colors ────────────────────────────────────────────────────────────
 
 export const RARITY_COLORS: Record<string, string> = {
   "Consumer Grade": "#b0c3d9",
   "Industrial Grade": "#5e98d9",
   "Mil-Spec Grade": "#4b69ff",
-  Restricted: "#8847ff",
-  Classified: "#d32ce6",
-  Covert: "#eb4b4b",
-  Contraband: "#e4ae39",
+  "Restricted": "#8847ff",
+  "Classified": "#d32ce6",
+  "Covert": "#eb4b4b",
+  "Contraband": "#e4ae39",
   "Base Grade": "#b0c3d9",
   "High Grade": "#4b69ff",
-  Remarkable: "#8847ff",
-  Exotic: "#d32ce6",
-  Extraordinary: "#eb4b4b",
+  "Remarkable": "#8847ff",
+  "Exotic": "#d32ce6",
+  "Extraordinary": "#eb4b4b",
 };
 
 export function getRarityColor(rarity: string): string {
   return RARITY_COLORS[rarity] ?? "#b0c3d9";
 }
 
-// ─── Image URLs ───────────────────────────────────────────────────────────────
-
 export function getSteamImageUrl(iconPath: string): string {
   return `https://community.cloudflare.steamstatic.com/economy/image/${iconPath}/360fx360f`;
 }
-
-// ─── Date Helpers ─────────────────────────────────────────────────────────────
 
 export function timeAgo(date: Date): string {
   const now = Date.now();
@@ -135,8 +118,6 @@ export function timeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-// ─── Debounce ─────────────────────────────────────────────────────────────────
-
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
   delay: number
@@ -147,8 +128,6 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
     timer = setTimeout(() => fn(...args), delay);
   };
 }
-
-// ─── Clamp ────────────────────────────────────────────────────────────────────
 
 export function clamp(val: number, min: number, max: number): number {
   return Math.min(Math.max(val, min), max);
