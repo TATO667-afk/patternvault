@@ -39,8 +39,8 @@ export function MarketTable({ listings, loading, onRefresh, lastUpdated }: Marke
     switch (sortField) {
       case "price":   av = a.price; bv = b.price; break;
       case "float":   av = a.floatValue ?? 999; bv = b.floatValue ?? 999; break;
-      case "profit":  av = a.potentialProfit; bv = b.potentialProfit; break;
-      case "diff":    av = a.diffFromCheapest; bv = b.diffFromCheapest; break;
+      case "profit":  av = a.potentialProfit ?? 0; bv = b.potentialProfit ?? 0; break;
+      case "diff":    av = a.diffFromCheapest ?? 0; bv = b.diffFromCheapest ?? 0; break;
       default:        av = a.price; bv = b.price;
     }
     return sortDir === "asc" ? av - bv : bv - av;
@@ -183,7 +183,7 @@ export function MarketTable({ listings, loading, onRefresh, lastUpdated }: Marke
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    {listing.potentialProfit > 0 ? (
+                    {(listing.potentialProfit ?? 0) > 0 ? (
                       <div className="flex items-center gap-1">
                         <TrendingDown className="h-3.5 w-3.5 text-success" />
                         <span className="text-success text-sm font-medium">
