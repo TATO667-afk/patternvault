@@ -75,6 +75,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(response);
   } catch (err) {
     console.error("[/api/market/compare]", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({
+      skin: { marketHashName: name, name, weapon: "", skin: "" },
+      listings: [],
+      errors: { general: String(err) },
+      cheapestPrice: 0,
+      cheapestMarket: "",
+      highestPrice: 0,
+      spread: 0,
+      spreadPercent: 0,
+      fetchedAt: new Date().toISOString(),
+    });
   }
 }
