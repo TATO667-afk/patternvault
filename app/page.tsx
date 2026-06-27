@@ -67,7 +67,11 @@ export default function HomePage() {
 
       const res = await fetch(`/api/market/compare?${params}`);
       const data = await res.json();
-      setCompareData(data);
+      if (!res.ok) {
+        setCompareData({ listings: [], errors: data.errors ?? { api: data.error ?? "Failed" }, cheapestPrice: 0, cheapestMarket: "", spread: 0, spreadPercent: 0, fetchedAt: new Date().toISOString() });
+      } else {
+        setCompareData(data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
