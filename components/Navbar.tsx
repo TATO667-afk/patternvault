@@ -1,169 +1,142 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import { motion } from "framer-motion";
-import {
-  BarChart3, Search, Zap, LayoutDashboard,
-  LogIn, LogOut, Menu, X, ChevronDown,
-} from "lucide-react";
-import Image from "next/image";
-import { UserProfile } from "@/types";
-import { Button } from "./ui/button";
+import { useState, useEffect } from "react";
+import { Search, Gem, ChevronDown, X, Layers, BookOpen, GitCompare, Users, Newspaper } from "lucide-react";
+
+const NAV = [
+  { href: "/patterns", label: "Patterns" },
+  { href: "/skins", label: "Skins" },
+  { href: "/compare", label: "Compare" },
+  { href: "/community", label: "Community" },
+  { href: "/news", label: "News" },
+];
 
 interface NavbarProps {
-  user?: UserProfile | null;
+  user?: { displayName: string; avatarUrl?: string } | null;
 }
-
-const NAV_LINKS = [
-  { href: "/", label: "Market Compare", icon: BarChart3 },
-  { href: "/opportunities", label: "Opportunities", icon: Zap },
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-];
 
 export function Navbar({ user }: NavbarProps) {
   const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setSearchOpen(true); }
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-[#222222] bg-[#0A0A0A]/90 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+    <>
+      <header style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        background: "rgba(7,8,10,0.85)", backdropFilter: "blur(20px)",
+        borderBottom: "1px solid var(--border)",
+      }}>
+        <div style={{ maxWidth: 1380, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", gap: 0 }}>
           {/* Logo */}
-          <Link href="/" className="flex items-center gap-2.5 flex-shrink-0">
-            <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
-              <BarChart3 className="w-4.5 h-4.5 text-white" />
+          <Link href="/" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", marginRight: 40, flexShrink: 0 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 8, background: "linear-gradient(135deg,#5865f2,#818cf8)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 16px rgba(88,101,242,0.4)" }}>
+              <Gem style={{ width: 16, height: 16, color: "#fff" }} />
             </div>
-            <span className="text-lg font-bold text-foreground tracking-tight">
-              Pattern<span className="text-primary">Vault</span>
-            </span>
+            <div>
+              <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", color: "var(--t1)" }}>Pattern</span>
+              <span style={{ fontWeight: 800, fontSize: 16, letterSpacing: "-0.02em", color: "#818cf8" }}>Vault</span>
+            </div>
           </Link>
 
-          {/* Desktop nav */}
-          <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href;
+          {/* Nav links */}
+          <nav style={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+            {NAV.map(({ href, label }) => {
+              const active = pathname.startsWith(href);
               return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-[#1A1A1A]"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {link.label}
-                  {isActive && (
-                    <motion.div
-                      layoutId="nav-indicator"
-                      className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary"
-                    />
-                  )}
+                <Link key={href} href={href} style={{
+                  padding: "6px 14px", borderRadius: 8, fontSize: 14, fontWeight: 500,
+                  textDecoration: "none", transition: "all 0.15s",
+                  color: active ? "var(--t1)" : "var(--t2)",
+                  background: active ? "var(--s3)" : "transparent",
+                }}>
+                  {label}
                 </Link>
               );
             })}
-          </div>
+          </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-3">
+          {/* Right: search + auth */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button onClick={() => setSearchOpen(true)}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 14px", borderRadius: 10, background: "var(--s2)", border: "1px solid var(--border)", color: "var(--t3)", fontSize: 13, cursor: "pointer", width: 220 }}>
+              <Search style={{ width: 14, height: 14 }} />
+              <span>Search patterns...</span>
+              <span style={{ marginLeft: "auto", fontSize: 11, padding: "1px 6px", borderRadius: 4, background: "var(--s3)", border: "1px solid var(--border)" }}>⌘K</span>
+            </button>
+
             {user ? (
-              <div className="relative">
-                <button
-                  onClick={() => setUserMenuOpen((v) => !v)}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-[#1A1A1A] transition-colors"
-                >
-                  {user.avatarUrl && (
-                    <Image
-                      src={user.avatarUrl}
-                      alt={user.displayName}
-                      width={28}
-                      height={28}
-                      className="rounded-full"
-                    />
-                  )}
-                  <span className="text-sm font-medium text-foreground hidden sm:block">
-                    {user.displayName}
-                  </span>
-                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                </button>
-
-                {userMenuOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-[#111111] border border-[#222222] rounded-lg shadow-xl z-50">
-                    <Link
-                      href="/dashboard"
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-foreground hover:bg-[#1A1A1A] transition-colors"
-                      onClick={() => setUserMenuOpen(false)}
-                    >
-                      <LayoutDashboard className="h-4 w-4" />
-                      Dashboard
-                    </Link>
-                    <div className="border-t border-[#222222] my-1" />
-                    <form action="/api/auth/logout" method="POST">
-                      <button
-                        type="submit"
-                        className="flex items-center gap-2 px-4 py-2.5 text-sm text-danger hover:bg-[#1A1A1A] w-full text-left transition-colors"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <LogOut className="h-4 w-4" />
-                        Sign Out
-                      </button>
-                    </form>
-                  </div>
-                )}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 12px", borderRadius: 10, background: "var(--s2)", border: "1px solid var(--border)", cursor: "pointer" }}>
+                {user.avatarUrl
+                  ? <img src={user.avatarUrl} style={{ width: 24, height: 24, borderRadius: 6 }} alt="" />
+                  : <div style={{ width: 24, height: 24, borderRadius: 6, background: "#5865f2", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 700, color: "#fff" }}>{user.displayName[0]}</div>
+                }
+                <span style={{ fontSize: 13, fontWeight: 500, color: "var(--t1)" }}>{user.displayName}</span>
+                <ChevronDown style={{ width: 13, height: 13, color: "var(--t3)" }} />
               </div>
             ) : (
-              <Link href="/login">
-                <Button size="sm" className="gap-2">
-                  <LogIn className="h-4 w-4" />
-                  Sign In with Steam
-                </Button>
-              </Link>
+              <a href="/login" style={{ padding: "7px 16px", borderRadius: 10, fontSize: 13, fontWeight: 600, background: "#5865f2", color: "#fff", textDecoration: "none", boxShadow: "0 0 16px rgba(88,101,242,0.3)" }}>
+                Sign In
+              </a>
             )}
-
-            {/* Mobile menu toggle */}
-            <button
-              className="md:hidden p-2 text-muted-foreground hover:text-foreground"
-              onClick={() => setMobileOpen((v) => !v)}
-            >
-              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <motion.div
-          initial={{ height: 0, opacity: 0 }}
-          animate={{ height: "auto", opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          className="md:hidden border-t border-[#222222] bg-[#0A0A0A] px-4 py-3 space-y-1"
-        >
-          {NAV_LINKS.map((link) => {
-            const Icon = link.icon;
-            const isActive = pathname === link.href;
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-[#1A1A1A]"
-                }`}
-              >
-                <Icon className="h-4 w-4" />
-                {link.label}
-              </Link>
-            );
-          })}
-        </motion.div>
+      {/* Search overlay */}
+      {searchOpen && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 200, display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 80, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}
+          onClick={() => setSearchOpen(false)}>
+          <div style={{ width: "100%", maxWidth: 640, margin: "0 24px" }} onClick={e => e.stopPropagation()}>
+            <div style={{ background: "var(--s1)", border: "1px solid var(--border2)", borderRadius: 16, overflow: "hidden", boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 20px", borderBottom: "1px solid var(--border)" }}>
+                <Search style={{ width: 20, height: 20, color: "var(--t2)" }} />
+                <input value={search} onChange={e => setSearch(e.target.value)}
+                  placeholder="Search patterns, skins, pattern IDs..."
+                  autoFocus
+                  style={{ flex: 1, background: "none", border: "none", outline: "none", fontSize: 16, color: "var(--t1)", fontFamily: "Inter, sans-serif" }}
+                />
+                <button onClick={() => setSearchOpen(false)} style={{ background: "none", border: "none", cursor: "pointer", color: "var(--t2)", padding: 4 }}>
+                  <X style={{ width: 18, height: 18 }} />
+                </button>
+              </div>
+              <div style={{ padding: "8px 0" }}>
+                <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--t3)", padding: "6px 20px 8px", textTransform: "uppercase", margin: 0 }}>Quick Access</p>
+                {[
+                  { label: "AK-47 | Case Hardened #661", sub: "Blue Gem · Tier 5 · ~$185,000", href: "/patterns/ak47-case-hardened-661" },
+                  { label: "Karambit | Fade 100%", sub: "Pattern 701 · $4,800", href: "/patterns/karambit-fade-701" },
+                  { label: "Karambit | Doppler Sapphire", sub: "Phase Sapphire · $12,500", href: "/patterns/karambit-doppler-sapphire-415" },
+                  { label: "Five-SeveN | Case Hardened #278", sub: "Blue Gem · #1 Ranked · ~$48,000", href: "/patterns/fiveseven-case-hardened-278" },
+                ].map(item => (
+                  <Link key={item.href} href={item.href} onClick={() => setSearchOpen(false)}
+                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 20px", textDecoration: "none" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--s2)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                    <span style={{ fontSize: 14, color: "var(--t1)", fontWeight: 500 }}>{item.label}</span>
+                    <span style={{ fontSize: 12, color: "var(--t3)" }}>{item.sub}</span>
+                  </Link>
+                ))}
+              </div>
+              <div style={{ padding: "10px 20px 14px", borderTop: "1px solid var(--border)" }}>
+                <p style={{ fontSize: 12, color: "var(--t3)", margin: 0 }}>
+                  <kbd style={{ padding: "1px 6px", borderRadius: 4, border: "1px solid var(--border2)", fontSize: 11, background: "var(--s3)" }}>↵</kbd> to search &nbsp;
+                  <kbd style={{ padding: "1px 6px", borderRadius: 4, border: "1px solid var(--border2)", fontSize: 11, background: "var(--s3)" }}>ESC</kbd> to close
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-    </nav>
+    </>
   );
 }

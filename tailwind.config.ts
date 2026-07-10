@@ -9,103 +9,66 @@ const config: Config = {
     "./app/**/*.{ts,tsx}",
     "./src/**/*.{ts,tsx}",
   ],
-  prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
-      screens: { "2xl": "1400px" },
-    },
+    container: { center: true, padding: "1.5rem", screens: { "2xl": "1380px" } },
     extend: {
       colors: {
-        background: "#0A0A0A",
-        surface: "#111111",
-        border: "#222222",
-        primary: {
-          DEFAULT: "#4F46E5",
-          foreground: "#ffffff",
-          hover: "#4338CA",
-        },
-        success: { DEFAULT: "#22C55E", foreground: "#ffffff" },
-        danger: { DEFAULT: "#EF4444", foreground: "#ffffff" },
-        muted: {
-          DEFAULT: "#1A1A1A",
-          foreground: "#6B7280",
-        },
-        accent: {
-          DEFAULT: "#4F46E5",
-          foreground: "#ffffff",
-        },
-        card: {
-          DEFAULT: "#111111",
-          foreground: "#F9FAFB",
-        },
-        popover: {
-          DEFAULT: "#111111",
-          foreground: "#F9FAFB",
-        },
-        secondary: {
-          DEFAULT: "#1A1A1A",
-          foreground: "#9CA3AF",
-        },
-        destructive: {
-          DEFAULT: "#EF4444",
-          foreground: "#ffffff",
-        },
-        input: "#1A1A1A",
-        ring: "#4F46E5",
-        foreground: "#F9FAFB",
-        marketplaces: {
-          steam: "#1B2838",
-          csfloat: "#2563EB",
-          skinport: "#7C3AED",
-          buff: "#DC2626",
-          dmarket: "#0EA5E9",
-          gamerpay: "#16A34A",
-        },
-      },
-      borderRadius: {
-        lg: "0.5rem",
-        md: "0.375rem",
-        sm: "0.25rem",
-      },
-      keyframes: {
-        "accordion-down": {
-          from: { height: "0" },
-          to: { height: "var(--radix-accordion-content-height)" },
-        },
-        "accordion-up": {
-          from: { height: "var(--radix-accordion-content-height)" },
-          to: { height: "0" },
-        },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        pulse: {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        },
-      },
-      animation: {
-        "accordion-down": "accordion-down 0.2s ease-out",
-        "accordion-up": "accordion-up 0.2s ease-out",
-        shimmer: "shimmer 2s infinite",
-        pulse: "pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
-      },
-      backgroundImage: {
-        shimmer:
-          "linear-gradient(90deg, transparent 25%, rgba(255,255,255,0.05) 50%, transparent 75%)",
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "gradient-conic":
-          "conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))",
-      },
-      backgroundSize: {
-        shimmer: "400% 100%",
+        bg:       "#07080a",
+        s1:       "#0c0d11",
+        s2:       "#111318",
+        s3:       "#16181f",
+        border:   { DEFAULT: "#1c1e27", bright: "#272a36" },
+        t1:       "#eceef3",
+        t2:       "#8c90a8",
+        t3:       "#52556a",
+        blue:     { DEFAULT: "#5865f2", bright: "#818cf8", dim: "rgba(88,101,242,0.12)" },
+        purple:   "#9333ea",
+        gold:     { DEFAULT: "#f59e0b", dim: "rgba(245,158,11,0.12)" },
+        teal:     "#06b6d4",
+        gem:      "#3b82f6",
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "Menlo", "monospace"],
+      },
+      borderRadius: {
+        "4xl": "2rem",
+        "3xl": "1.5rem",
+      },
+      keyframes: {
+        "fade-up": {
+          from: { opacity: "0", transform: "translateY(16px)" },
+          to:   { opacity: "1", transform: "translateY(0)" },
+        },
+        shimmer: {
+          "0%":   { backgroundPosition: "-200% 0" },
+          "100%": { backgroundPosition: "200% 0" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%":      { transform: "translateY(-8px)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(88,101,242,0.2)" },
+          "50%":      { boxShadow: "0 0 40px rgba(88,101,242,0.4)" },
+        },
+      },
+      animation: {
+        "fade-up":   "fade-up 0.5s ease both",
+        shimmer:     "shimmer 1.5s infinite",
+        float:       "float 4s ease-in-out infinite",
+        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
+      },
+      backgroundImage: {
+        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
+        noise: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E\")",
+      },
+      boxShadow: {
+        card:       "0 1px 3px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.4)",
+        "card-hover": "0 8px 32px rgba(0,0,0,0.4)",
+        blue:       "0 0 40px rgba(88,101,242,0.15)",
+        gold:       "0 0 40px rgba(245,158,11,0.15)",
+        gem:        "0 0 30px rgba(59,130,246,0.3)",
       },
     },
   },

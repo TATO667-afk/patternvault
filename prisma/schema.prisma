@@ -7,23 +7,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─── Auth ───────────────────────────────────────────────────────────────────
+// ─── Auth ────────────────────────────────────────────────────────────────────
 
 model User {
-  id            String    @id @default(cuid())
-  steamId       String    @unique
-  displayName   String
-  avatarUrl     String?
-  profileUrl    String?
-  email         String?   @unique
-  emailVerified DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id          String   @id @default(cuid())
+  steamId     String   @unique
+  displayName String
+  avatarUrl   String?
+  profileUrl  String?
+  role        String   @default("user") // user | admin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  watchlists    Watchlist[]
-  priceAlerts   PriceAlert[]
-  searchHistory SearchHistory[]
-  sessions      Session[]
+  sessions    Session[]
+  favorites   UserFavorite[]
+  screenshots Screenshot[]
+  comments    Comment[]
+  collections Collection[]
 
   @@map("users")
 }
@@ -39,196 +39,189 @@ model Session {
   @@map("sessions")
 }
 
-// ─── Market Data ─────────────────────────────────────────────────────────────
+// ─── Pattern Database ─────────────────────────────────────────────────────────
 
-model Marketplace {
-  id          String    @id @default(cuid())
-  slug        String    @unique // steam | csfloat | skinport | buff | dmarket | gamerpay
-  name        String
-  displayName String
-  logoUrl     String?
-  baseUrl     String
-  feePercent  Float     @default(0)
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+model Weapon {
+  id       String @id @default(cuid())
+  name     String @unique // "AK-47", "AWP", "Karambit"
+  category String         // "Rifle", "Pistol", "Knife", "Gloves", "SMG", "Shotgun"
+  slug     String @unique
+  skins    Skin[]
 
-  listings    Listing[]
-
-  @@map("marketplaces")
+  @@map("weapons")
 }
 
 model Skin {
-  id            String    @id @default(cuid())
+  id             String   @id @default(cuid())
+  weaponId       String
+  weapon         Weapon   @relation(fields: [weaponId], references: [id])
+  name           String               // "Case Hardened", "Fade", "Dragon Lore"
   marketHashName String   @unique
-  name          String
-  weapon        String
-  skin          String
-  imageUrl      String?
-  rarity        String?
-  type          String?   // Rifle | Pistol | Knife | Gloves | etc.
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  slug           String   @unique
+  rarity         String?              // "Covert", "Classified", "Restricted", "Mil-Spec"
+  collection     String?              // "The Chroma Collection"
+  minFloat       Float?
+  maxFloat       Float?
+  imageUrl       String?
+  description    String?
+  releaseDate    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  listings      Listing[]
-  priceHistory  PriceHistory[]
-  patterns      Pattern[]
-  watchlists    Watchlist[]
-  priceAlerts   PriceAlert[]
-  opportunities Opportunity[]
-  searchHistory SearchHistory[]
+  patterns       Pattern[]
+  priceHistory   SkinPriceHistory[]
 
-  @@index([weapon])
-  @@index([name])
+  @@index([weaponId])
   @@map("skins")
 }
 
-model Listing {
-  id            String      @id @default(cuid())
-  skinId        String
-  marketplaceId String
-  externalId    String?     // marketplace's own listing ID
-  price         Float       // in USD
-  currency      String      @default("USD")
-  floatValue    Float?
-  paintSeed     Int?        // Pattern ID
-  wear          String?     // Factory New | Minimal Wear | etc.
-  inspectLink   String?
-  imageUrl      String?
-  stickers      Json?       // [{name, imageUrl, slot, wear}]
-  isStatTrak    Boolean     @default(false)
-  isSouvenir    Boolean     @default(false)
-  listingUrl    String?
-  fetchedAt     DateTime    @default(now())
-  expiresAt     DateTime?
-
-  skin        Skin        @relation(fields: [skinId], references: [id])
-  marketplace Marketplace @relation(fields: [marketplaceId], references: [id])
-
-  @@unique([marketplaceId, externalId])
-  @@index([skinId])
-  @@index([price])
-  @@index([floatValue])
-  @@index([fetchedAt])
-  @@map("listings")
-}
-
-model PriceHistory {
-  id          String   @id @default(cuid())
-  skinId      String
-  date        DateTime
-  avgPrice    Float
-  minPrice    Float
-  maxPrice    Float
-  volume      Int      @default(0)
-  marketplace String?  // null = aggregate across all markets
-
-  skin Skin @relation(fields: [skinId], references: [id])
-
-  @@unique([skinId, date, marketplace])
-  @@index([skinId, date])
-  @@map("price_history")
-}
-
 model Pattern {
-  id            String  @id @default(cuid())
-  skinId        String
-  paintSeed     Int
-  tier          String? // Blue Gem Tier 1, etc.
-  description   String?
-  rarityScore   Float?  // 0-100 rarity score
-  imageUrl      String?
+  id             String   @id @default(cuid())
+  skinId         String
+  skin           Skin     @relation(fields: [skinId], references: [id])
+  patternId      Int                  // 0–1000 (paintSeed)
 
-  skin Skin @relation(fields: [skinId], references: [id])
+  // Attribute breakdowns (0–100%)
+  bluePercent    Float?
+  goldPercent    Float?
+  silverPercent  Float?
+  bronzePercent  Float?
+  fadePercent    Float?               // for Fade knives
 
-  @@unique([skinId, paintSeed])
+  // Doppler / special
+  phase          String?              // "Phase 1"–"Phase 4", "Ruby", "Sapphire", "Black Pearl"
+
+  // Ranking & scoring
+  tier           Int      @default(1) // 1 (common) – 5 (legendary)
+  isBlueGem      Boolean  @default(false)
+  rarityScore    Float?               // 0–100
+  collectorScore Float?               // community score
+  premiumMulti   Float?               // price multiplier vs base
+
+  imageUrl       String?
+  inspectLink    String?
+  description    String?
+  note           String?              // admin note: "Known craft by player X"
+
+  screenshots    Screenshot[]
+  favorites      UserFavorite[]
+  comments       Comment[]
+  priceHistory   PatternPriceHistory[]
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([skinId, patternId])
   @@index([skinId])
+  @@index([tier])
+  @@index([isBlueGem])
+  @@index([fadePercent])
   @@map("patterns")
 }
 
-// ─── Opportunities ───────────────────────────────────────────────────────────
+model PatternPriceHistory {
+  id        String   @id @default(cuid())
+  patternId String
+  pattern   Pattern  @relation(fields: [patternId], references: [id])
+  price     Float
+  premium   Float
+  source    String   // "steam" | "buff" | "manual"
+  soldBy    String?
+  soldTo    String?
+  date      DateTime
+  note      String?
 
-model Opportunity {
-  id               String   @id @default(cuid())
-  skinId           String
-  type             String   // arbitrage | underpriced | rare_pattern | low_float
-  sourceMarket     String
-  destMarket       String?
-  buyPrice         Float
-  sellPrice        Float?
-  expectedProfit   Float
-  profitPercent    Float
-  floatValue       Float?
-  paintSeed        Int?
-  listingUrl       String
-  score            Float    @default(0) // composite opportunity score
-  isActive         Boolean  @default(true)
-  expiresAt        DateTime?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  skin Skin @relation(fields: [skinId], references: [id])
-
-  @@index([isActive, score])
-  @@index([type])
-  @@index([skinId])
-  @@map("opportunities")
+  @@index([patternId, date])
+  @@map("pattern_price_history")
 }
 
-// ─── User Features ───────────────────────────────────────────────────────────
+model SkinPriceHistory {
+  id      String   @id @default(cuid())
+  skinId  String
+  skin    Skin     @relation(fields: [skinId], references: [id])
+  price   Float
+  date    DateTime
+  source  String
 
-model Watchlist {
+  @@index([skinId, date])
+  @@map("skin_price_history")
+}
+
+// ─── Community ───────────────────────────────────────────────────────────────
+
+model Screenshot {
+  id        String   @id @default(cuid())
+  patternId String
+  pattern   Pattern  @relation(fields: [patternId], references: [id])
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  imageUrl  String
+  caption   String?
+  approved  Boolean  @default(false)
+  likes     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@index([patternId])
+  @@map("screenshots")
+}
+
+model UserFavorite {
   id        String   @id @default(cuid())
   userId    String
-  skinId    String
-  name      String?
-  notes     String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patternId String
+  pattern   Pattern  @relation(fields: [patternId], references: [id])
   createdAt DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skin Skin @relation(fields: [skinId], references: [id])
-
-  @@unique([userId, skinId])
-  @@map("watchlists")
+  @@unique([userId, patternId])
+  @@map("user_favorites")
 }
 
-model PriceAlert {
-  id            String   @id @default(cuid())
-  userId        String
-  skinId        String
-  targetPrice   Float
-  condition     String   // below | above
-  marketplace   String?  // null = any marketplace
-  wear          String?
-  maxFloat      Float?
-  minFloat      Float?
-  patternId     Int?
-  isActive      Boolean  @default(true)
-  triggered     Boolean  @default(false)
-  triggeredAt   DateTime?
-  notifyEmail   Boolean  @default(true)
-  notifyBrowser Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  skin Skin @relation(fields: [skinId], references: [id])
-
-  @@index([userId, isActive])
-  @@map("price_alerts")
-}
-
-model SearchHistory {
+model Comment {
   id        String   @id @default(cuid())
-  userId    String?
-  skinId    String?
-  query     String
-  filters   Json?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  patternId String
+  pattern   Pattern  @relation(fields: [patternId], references: [id])
+  body      String
+  likes     Int      @default(0)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-  skin Skin? @relation(fields: [skinId], references: [id])
+  @@index([patternId])
+  @@map("comments")
+}
 
-  @@index([userId])
-  @@map("search_history")
+model Collection {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isPublic    Boolean  @default(true)
+  patternIds  String[] // array of pattern IDs
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("collections")
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+model Article {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  content     String
+  imageUrl    String?
+  category    String   // "news" | "guide" | "showcase" | "market"
+  authorName  String
+  published   Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([published, publishedAt])
+  @@map("articles")
 }
