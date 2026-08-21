@@ -40,6 +40,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `DMARKET_SECRET_KEY` | Optional | DMarket API secret key |
 | `GAMERPAY_API_KEY` | Optional | GamerPay API key |
 | `RESEND_API_KEY` | Optional | Email alerts via Resend |
+| `IDEOGRAM_API_KEY` | Optional | AI-generated pattern showcase art via Ideogram |
 
 ## Architecture
 
