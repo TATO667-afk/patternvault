@@ -1,7 +1,8 @@
 "use client";
+import { useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Heart, Share2, ExternalLink, TrendingUp, Star, Gem, ChevronRight } from "lucide-react";
+import { ArrowLeft, Heart, Share2, ExternalLink, TrendingUp, Star, Gem, ChevronRight, Sparkles, Loader2, X } from "lucide-react";
 import { MOCK_PATTERNS } from "@/lib/mock";
 import { PatternCard } from "@/components/PatternCard";
 
@@ -54,6 +55,40 @@ export default function PatternDetailPage() {
     if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
     return `$${n.toLocaleString()}`;
   };
+
+  const [showcaseUrl, setShowcaseUrl] = useState<string | null>(null);
+  const [showcaseLoading, setShowcaseLoading] = useState(false);
+  const [showcaseError, setShowcaseError] = useState<string | null>(null);
+
+  async function generateShowcase() {
+    setShowcaseLoading(true);
+    setShowcaseError(null);
+    try {
+      const res = await fetch(`/api/patterns/${pattern.id}/showcase`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weaponName: pattern.weaponName,
+          skinName: pattern.skinName,
+          patternId: pattern.patternId,
+          isBlueGem: pattern.isBlueGem,
+          phase: pattern.phase,
+          bluePercent: pattern.bluePercent,
+          goldPercent: pattern.goldPercent,
+          fadePercent: pattern.fadePercent,
+          rarityScore: pattern.rarityScore,
+          tier: pattern.tier,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "Failed to generate showcase image");
+      setShowcaseUrl(data.imageUrl);
+    } catch (err) {
+      setShowcaseError(err instanceof Error ? err.message : "Failed to generate showcase image");
+    } finally {
+      setShowcaseLoading(false);
+    }
+  }
 
   return (
     <div style={{ maxWidth: 1380, margin: "0 auto", padding: "40px 24px" }}>
@@ -204,6 +239,19 @@ export default function PatternDetailPage() {
                 <Share2 style={{ width: 14, height: 14 }} /> Share
               </button>
             </div>
+            <button
+              onClick={generateShowcase}
+              disabled={showcaseLoading}
+              style={{ padding: "10px 20px", borderRadius: 10, background: "var(--s2)", border: `1px solid ${accentColor}40`, color: accentColor, fontWeight: 600, fontSize: 13, cursor: showcaseLoading ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, opacity: showcaseLoading ? 0.7 : 1, marginTop: 10 }}
+            >
+              {showcaseLoading
+                ? <Loader2 style={{ width: 14, height: 14 }} className="animate-spin" />
+                : <Sparkles style={{ width: 14, height: 14 }} />}
+              {showcaseLoading ? "Generating AI Showcase…" : "Generate AI Showcase"}
+            </button>
+            {showcaseError && (
+              <p style={{ fontSize: 12, color: "#f87171", margin: "8px 0 0" }}>{showcaseError}</p>
+            )}
             {pattern.inspectLink && (
               <a href={pattern.inspectLink} target="_blank" rel="noopener noreferrer"
                 style={{ padding: "10px 20px", borderRadius: 10, background: "var(--s2)", border: "1px solid var(--border)", color: "var(--t2)", fontWeight: 500, fontSize: 13, textDecoration: "none", display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}>
@@ -227,6 +275,31 @@ export default function PatternDetailPage() {
             {similar.map(p => <PatternCard key={p.id} pattern={p} />)}
           </div>
         </section>
+      )}
+
+      {/* AI showcase modal */}
+      {showcaseUrl && (
+        <div
+          onClick={() => setShowcaseUrl(null)}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100, padding: 24 }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{ background: "var(--s1)", border: `1px solid ${accentColor}40`, borderRadius: 20, padding: 20, maxWidth: 560, width: "100%", position: "relative" }}
+          >
+            <button
+              onClick={() => setShowcaseUrl(null)}
+              aria-label="Close"
+              style={{ position: "absolute", top: 14, right: 14, background: "var(--s2)", border: "1px solid var(--border)", borderRadius: 8, width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", color: "var(--t2)" }}
+            >
+              <X style={{ width: 14, height: 14 }} />
+            </button>
+            <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", color: "var(--t3)", textTransform: "uppercase", margin: "0 0 12px" }}>
+              AI Showcase — {pattern.weaponName} | {pattern.skinName} #{pattern.patternId}
+            </p>
+            <img src={showcaseUrl} alt={`AI-generated showcase of ${pattern.weaponName} ${pattern.skinName} pattern ${pattern.patternId}`} style={{ width: "100%", borderRadius: 12, display: "block" }} />
+          </div>
+        </div>
       )}
     </div>
   );
