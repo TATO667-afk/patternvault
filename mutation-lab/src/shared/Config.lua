@@ -18,6 +18,10 @@ Config.RARITY = {
 
 Config.STARTER_CURRENCY = 100
 Config.CURRENCY_NAME = "Mutagen"
+Config.MUTATION_COST = 50
+Config.MUTATION_DURATION = 5
+Config.MUTATION_COOLDOWN = 6
+Config.INCOME_PER_RARITY = {1, 3, 8, 20, 50, 150}
 
 -- Layout
 Config.PLOT_RADIUS = 160
