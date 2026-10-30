@@ -1,11 +1,11 @@
 -- ================================================================
--- MUTATION LAB  —  PHASE 1 INSTALLER
+-- MUTATION LAB  —  PHASE 1 INSTALLER  (v2)
 -- ================================================================
 -- Paste this entire script into Roblox Studio's Command Bar and
 -- press Enter. It builds the lobby, 8 laboratory plots, corridors,
--- lighting, and all gameplay scripts in one shot.
+-- lighting, and all gameplay scripts.
 --
--- Safe to re-run: it removes the previous installation first.
+-- Safe to re-run: removes the previous installation first.
 -- ================================================================
 
 print("[MutationLab] Phase 1 installer starting...")
@@ -23,12 +23,13 @@ local SPS       = SP:FindFirstChild("StarterPlayerScripts")
 ----------------------------------------------------------------
 -- Clean previous install
 ----------------------------------------------------------------
+print("[MutationLab] Cleaning previous install...")
 if WS:FindFirstChild("MutationLab")  then WS.MutationLab:Destroy() end
 if WS:FindFirstChild("Baseplate")    then WS.Baseplate:Destroy() end
 if SSS:FindFirstChild("MutationLab") then SSS.MutationLab:Destroy() end
 if RS:FindFirstChild("MutationLab")  then RS.MutationLab:Destroy() end
 if SPS and SPS:FindFirstChild("MutationLab") then SPS.MutationLab:Destroy() end
-for _, c in Lighting:GetChildren() do
+for _, c in ipairs(Lighting:GetChildren()) do
 	if c:GetAttribute("MutationLab") then c:Destroy() end
 end
 
@@ -36,7 +37,7 @@ end
 -- Constants
 ----------------------------------------------------------------
 local NUM_PLOTS   = 8
-local PLOT_RADIUS = 160   -- centre-of-plot distance from origin
+local PLOT_RADIUS = 160
 local PLOT_SIZE   = 64
 local PLOT_HALF   = 32
 local FLOOR_H     = 2
@@ -44,32 +45,32 @@ local WALL_H      = 18
 local WALL_T      = 2
 local LOBBY_SIZE  = 80
 local LOBBY_HALF  = 40
-local CORR_W      = 16    -- corridor width
-local BASE_Y      = 10    -- everything floats above the void
+local CORR_W      = 16
+local BASE_Y      = 10
 local NEON_H      = 0.5
 
 -- Derived
-local CORR_LEN      = PLOT_RADIUS - PLOT_HALF - LOBBY_HALF       -- 88
-local CORR_DIST     = LOBBY_HALF + CORR_LEN / 2                  -- 84
+local CORR_LEN      = PLOT_RADIUS - PLOT_HALF - LOBBY_HALF
+local CORR_DIST     = LOBBY_HALF + CORR_LEN / 2
 local WALL_Y        = FLOOR_H / 2 + WALL_H / 2
 local NEON_Y        = FLOOR_H / 2 + WALL_H + NEON_H / 2
-local SIDE_LEN      = PLOT_SIZE - WALL_T * 2                     -- 60
-local FRONT_SEG_LEN = PLOT_HALF - WALL_T - CORR_W / 2            -- 22
-local FRONT_SEG_CX  = (PLOT_HALF - WALL_T + CORR_W / 2) / 2     -- 19
+local SIDE_LEN      = PLOT_SIZE - WALL_T * 2
+local FRONT_SEG_LEN = PLOT_HALF - WALL_T - CORR_W / 2
+local FRONT_SEG_CX  = (PLOT_HALF - WALL_T + CORR_W / 2) / 2
 
--- Palette
+-- Palette (brightened for visibility)
 local C = {
-	lobbyFloor = Color3.fromRGB(40, 42, 54),
-	plotFloor  = Color3.fromRGB(32, 34, 44),
-	corridor   = Color3.fromRGB(36, 38, 48),
-	wall       = Color3.fromRGB(48, 50, 62),
-	wallDark   = Color3.fromRGB(28, 30, 40),
+	lobbyFloor = Color3.fromRGB(60, 62, 78),
+	plotFloor  = Color3.fromRGB(50, 52, 66),
+	corridor   = Color3.fromRGB(55, 57, 72),
+	wall       = Color3.fromRGB(65, 68, 82),
+	wallDark   = Color3.fromRGB(42, 44, 56),
 	neonGreen  = Color3.fromRGB(0, 255, 120),
-	neonPurple = Color3.fromRGB(140, 0, 255),
-	signBg     = Color3.fromRGB(12, 12, 22),
-	pillar     = Color3.fromRGB(55, 58, 70),
+	neonPurple = Color3.fromRGB(160, 40, 255),
+	signBg     = Color3.fromRGB(18, 18, 30),
+	pillar     = Color3.fromRGB(70, 73, 88),
 	text       = Color3.fromRGB(0, 255, 120),
-	textDim    = Color3.fromRGB(80, 200, 130),
+	textDim    = Color3.fromRGB(100, 220, 160),
 }
 
 ----------------------------------------------------------------
@@ -91,7 +92,7 @@ local function part(parent, name, size, cf, color, opts)
 	p.BottomSurface = Enum.SurfaceType.Smooth
 	if opts then
 		if opts.neon then p.Material = Enum.Material.Neon end
-		if opts.t    then p.Transparency = opts.t end
+		if opts.t and opts.t > 0 then p.Transparency = opts.t end
 		if opts.cc ~= nil then p.CanCollide  = opts.cc end
 		if opts.cs ~= nil then p.CastShadow  = opts.cs end
 	end
@@ -117,14 +118,15 @@ local function surfaceSign(parent, face, text, textColor)
 	sg.Parent          = parent
 
 	local tl = Instance.new("TextLabel")
-	tl.Name                 = "SignText"
-	tl.Size                 = UDim2.new(1, 0, 1, 0)
-	tl.BackgroundTransparency = 1
-	tl.TextColor3           = textColor or C.text
-	tl.Font                 = Enum.Font.GothamBold
-	tl.TextScaled           = true
-	tl.Text                 = text
-	tl.Parent               = sg
+	tl.Name                  = "SignText"
+	tl.Size                  = UDim2.new(1, 0, 1, 0)
+	tl.BackgroundColor3      = C.signBg
+	tl.BackgroundTransparency = 0.5
+	tl.TextColor3            = textColor or C.text
+	tl.Font                  = Enum.Font.GothamBold
+	tl.TextScaled            = true
+	tl.Text                  = text
+	tl.Parent                = sg
 	return sg, tl
 end
 
@@ -132,13 +134,16 @@ local function taggedEffect(className, name, props)
 	local e = Instance.new(className)
 	e.Name = name
 	e:SetAttribute("MutationLab", true)
-	for k, v in props do e[k] = v end
+	for k, v in pairs(props) do
+		e[k] = v
+	end
 	e.Parent = Lighting
 end
 
 -- ================================================================
 --  BUILD LOBBY
 -- ================================================================
+print("[MutationLab] Building lobby...")
 local lobbyF = Instance.new("Folder")
 lobbyF.Name   = "Lobby"
 lobbyF.Parent = root
@@ -150,21 +155,21 @@ part(lobbyF, "Floor",
 
 -- Centre raised ring
 part(lobbyF, "CentreRing",
-	Vector3.new(20, 0.4, 20),
+	Vector3.new(22, 0.4, 22),
 	CFrame.new(0, BASE_Y + FLOOR_H / 2 + 0.2, 0), C.wallDark)
 
 -- Glowing centre column
 local col = part(lobbyF, "CentreColumn",
 	Vector3.new(5, 28, 5),
 	CFrame.new(0, BASE_Y + 14, 0),
-	C.neonGreen, { neon = true, t = 0.25 })
-pointLight(col, C.neonGreen, 2, 60)
+	C.neonGreen, { neon = true, t = 0.2 })
+pointLight(col, C.neonGreen, 3, 80)
 
 -- Inner glow ring on floor
 part(lobbyF, "InnerGlow",
-	Vector3.new(10, 0.6, 10),
+	Vector3.new(12, 0.6, 12),
 	CFrame.new(0, BASE_Y + FLOOR_H / 2 + 0.3, 0),
-	C.neonGreen, { neon = true, t = 0.4 })
+	C.neonGreen, { neon = true, t = 0.3 })
 
 -- Title billboard (reads from front and back)
 local titlePart = part(lobbyF, "Title",
@@ -182,60 +187,70 @@ surfaceSign(subPart, Enum.NormalId.Back,  "COLLECT  ·  MUTATE  ·  DISCOVER", C
 
 -- Four spawn locations
 local spawnOffsets = {
-	Vector3.new(-10, 0, -10),
-	Vector3.new( 10, 0, -10),
-	Vector3.new(-10, 0,  10),
-	Vector3.new( 10, 0,  10),
+	Vector3.new(-12, 0, -12),
+	Vector3.new( 12, 0, -12),
+	Vector3.new(-12, 0,  12),
+	Vector3.new( 12, 0,  12),
 }
-for si, off in spawnOffsets do
+for si = 1, #spawnOffsets do
+	local off = spawnOffsets[si]
 	local sp = Instance.new("SpawnLocation")
 	sp.Name     = "Spawn_" .. si
 	sp.Anchored = true
 	sp.Size     = Vector3.new(6, 1, 6)
-	sp.CFrame   = CFrame.new(off.X, BASE_Y + FLOOR_H / 2, off.Z)
+	sp.CFrame   = CFrame.new(off.X, BASE_Y + FLOOR_H / 2 + 0.5, off.Z)
 	sp.Color    = C.neonGreen
 	sp.Material = Enum.Material.Neon
-	sp.Transparency   = 0.6
+	sp.Transparency   = 0.5
 	sp.TopSurface     = Enum.SurfaceType.Smooth
 	sp.BottomSurface  = Enum.SurfaceType.Smooth
-	sp.CanCollide     = false
+	sp.CanCollide     = true
+	sp.Duration       = 0
 	sp.Parent         = lobbyF
 end
+print("[MutationLab] Lobby done. Spawns placed.")
 
 -- Corner pillars
-for _, sx in { -1, 1 } do
-	for _, sz in { -1, 1 } do
-		local px = sx * (LOBBY_HALF - 3)
-		local pz = sz * (LOBBY_HALF - 3)
-		part(lobbyF, "Pillar",
-			Vector3.new(4, 22, 4),
-			CFrame.new(px, BASE_Y + 11, pz), C.pillar)
-		local strip = part(lobbyF, "PillarNeon",
-			Vector3.new(4.2, 0.8, 4.2),
-			CFrame.new(px, BASE_Y + 21, pz),
-			C.neonPurple, { neon = true })
-		pointLight(strip, C.neonPurple, 0.5, 20)
-	end
+local pillarSigns = { {-1,-1}, {1,-1}, {-1,1}, {1,1} }
+for pi = 1, #pillarSigns do
+	local sx = pillarSigns[pi][1]
+	local sz = pillarSigns[pi][2]
+	local px = sx * (LOBBY_HALF - 3)
+	local pz = sz * (LOBBY_HALF - 3)
+	part(lobbyF, "Pillar_" .. pi,
+		Vector3.new(4, 22, 4),
+		CFrame.new(px, BASE_Y + 11, pz), C.pillar)
+	local strip = part(lobbyF, "PillarNeon_" .. pi,
+		Vector3.new(4.2, 0.8, 4.2),
+		CFrame.new(px, BASE_Y + 21, pz),
+		C.neonPurple, { neon = true })
+	pointLight(strip, C.neonPurple, 0.8, 25)
 end
 
--- Floor edge neon strips (lobby perimeter accents)
-for _, axis in { "X", "Z" } do
-	for _, sign in { -1, 1 } do
-		local sz, cf
-		if axis == "X" then
-			sz = Vector3.new(LOBBY_SIZE, 0.3, 1)
-			cf = CFrame.new(0, BASE_Y + FLOOR_H / 2 + 0.15, sign * LOBBY_HALF)
-		else
-			sz = Vector3.new(1, 0.3, LOBBY_SIZE)
-			cf = CFrame.new(sign * LOBBY_HALF, BASE_Y + FLOOR_H / 2 + 0.15, 0)
-		end
-		part(lobbyF, "EdgeNeon", sz, cf, C.neonPurple, { neon = true, t = 0.3 })
-	end
-end
+-- Floor edge neon strips (lobby perimeter)
+-- Top edge (Z = -LOBBY_HALF)
+part(lobbyF, "EdgeN", Vector3.new(LOBBY_SIZE, 0.3, 1),
+	CFrame.new(0, BASE_Y + FLOOR_H / 2 + 0.15, -LOBBY_HALF),
+	C.neonPurple, { neon = true, t = 0.2 })
+-- Bottom edge (Z = +LOBBY_HALF)
+part(lobbyF, "EdgeS", Vector3.new(LOBBY_SIZE, 0.3, 1),
+	CFrame.new(0, BASE_Y + FLOOR_H / 2 + 0.15, LOBBY_HALF),
+	C.neonPurple, { neon = true, t = 0.2 })
+-- Left edge (X = -LOBBY_HALF)
+part(lobbyF, "EdgeW", Vector3.new(1, 0.3, LOBBY_SIZE),
+	CFrame.new(-LOBBY_HALF, BASE_Y + FLOOR_H / 2 + 0.15, 0),
+	C.neonPurple, { neon = true, t = 0.2 })
+-- Right edge (X = +LOBBY_HALF)
+part(lobbyF, "EdgeE", Vector3.new(1, 0.3, LOBBY_SIZE),
+	CFrame.new(LOBBY_HALF, BASE_Y + FLOOR_H / 2 + 0.15, 0),
+	C.neonPurple, { neon = true, t = 0.2 })
+
+print("[MutationLab] Lobby decorations done.")
 
 -- ================================================================
 --  BUILD PLOTS
 -- ================================================================
+print("[MutationLab] Building " .. NUM_PLOTS .. " plots...")
 local plotsF = Instance.new("Folder")
 plotsF.Name   = "Plots"
 plotsF.Parent = root
@@ -245,7 +260,7 @@ for i = 1, NUM_PLOTS do
 	local px  = PLOT_RADIUS * math.cos(ang)
 	local pz  = PLOT_RADIUS * math.sin(ang)
 	local ctr = Vector3.new(px, BASE_Y, pz)
-	local cf  = CFrame.lookAt(ctr, Vector3.new(0, BASE_Y, 0)) -- -Z faces lobby
+	local cf  = CFrame.lookAt(ctr, Vector3.new(0, BASE_Y, 0))
 
 	local pm = Instance.new("Model")
 	pm.Name = "Plot_" .. i
@@ -255,7 +270,7 @@ for i = 1, NUM_PLOTS do
 		Vector3.new(PLOT_SIZE, FLOOR_H, PLOT_SIZE), cf, C.plotFloor)
 	pm.PrimaryPart = fl
 
-	-- Back wall (+Z, away from lobby)
+	-- Back wall
 	part(pm, "BackWall",
 		Vector3.new(PLOT_SIZE, WALL_H, WALL_T),
 		cf * CFrame.new(0, WALL_Y, PLOT_HALF - WALL_T / 2), C.wall)
@@ -265,9 +280,9 @@ for i = 1, NUM_PLOTS do
 		Vector3.new(PLOT_SIZE + 0.2, NEON_H, WALL_T + 0.2),
 		cf * CFrame.new(0, NEON_Y, PLOT_HALF - WALL_T / 2),
 		C.neonGreen, { neon = true })
-	pointLight(bn, C.neonGreen, 0.8, 40)
+	pointLight(bn, C.neonGreen, 1, 45)
 
-	-- Left wall (-X)
+	-- Left wall
 	part(pm, "LeftWall",
 		Vector3.new(WALL_T, WALL_H, SIDE_LEN),
 		cf * CFrame.new(-PLOT_HALF + WALL_T / 2, WALL_Y, 0), C.wall)
@@ -276,7 +291,7 @@ for i = 1, NUM_PLOTS do
 		cf * CFrame.new(-PLOT_HALF + WALL_T / 2, NEON_Y, 0),
 		C.neonGreen, { neon = true })
 
-	-- Right wall (+X)
+	-- Right wall
 	part(pm, "RightWall",
 		Vector3.new(WALL_T, WALL_H, SIDE_LEN),
 		cf * CFrame.new(PLOT_HALF - WALL_T / 2, WALL_Y, 0), C.wall)
@@ -285,7 +300,7 @@ for i = 1, NUM_PLOTS do
 		cf * CFrame.new(PLOT_HALF - WALL_T / 2, NEON_Y, 0),
 		C.neonGreen, { neon = true })
 
-	-- Front-left wall segment (door frame)
+	-- Front-left wall segment
 	part(pm, "FrontLeft",
 		Vector3.new(FRONT_SEG_LEN, WALL_H, WALL_T),
 		cf * CFrame.new(-FRONT_SEG_CX, WALL_Y, -PLOT_HALF + WALL_T / 2), C.wall)
@@ -295,7 +310,7 @@ for i = 1, NUM_PLOTS do
 		Vector3.new(FRONT_SEG_LEN, WALL_H, WALL_T),
 		cf * CFrame.new(FRONT_SEG_CX, WALL_Y, -PLOT_HALF + WALL_T / 2), C.wall)
 
-	-- Door frame neon accents (vertical strips beside doorway)
+	-- Doorway neon accents
 	part(pm, "DoorNeonL",
 		Vector3.new(0.4, WALL_H, WALL_T + 0.2),
 		cf * CFrame.new(-CORR_W / 2 + 0.2, WALL_Y, -PLOT_HALF + WALL_T / 2),
@@ -305,7 +320,7 @@ for i = 1, NUM_PLOTS do
 		cf * CFrame.new(CORR_W / 2 - 0.2, WALL_Y, -PLOT_HALF + WALL_T / 2),
 		C.neonPurple, { neon = true })
 
-	-- Lab number sign (on inside of back wall, faces player)
+	-- Lab number sign (inside back wall, faces interior)
 	local labSign = part(pm, "LabSign",
 		Vector3.new(18, 5, 0.4),
 		cf * CFrame.new(0, FLOOR_H / 2 + WALL_H - 6, PLOT_HALF - WALL_T - 0.3),
@@ -323,10 +338,10 @@ for i = 1, NUM_PLOTS do
 	local marker = part(pm, "MachineMarker",
 		Vector3.new(10, 0.3, 10),
 		cf * CFrame.new(0, FLOOR_H / 2 + 0.15, 8),
-		C.neonPurple, { neon = true, t = 0.4 })
-	pointLight(marker, C.neonPurple, 0.6, 16)
+		C.neonPurple, { neon = true, t = 0.3 })
+	pointLight(marker, C.neonPurple, 0.8, 20)
 
-	-- Display slot markers (6 circles for future creature display)
+	-- Display slot markers (6 spots for future creature display)
 	local slotPositions = {
 		Vector3.new(-16, 0, -8),
 		Vector3.new(  0, 0, -8),
@@ -335,14 +350,15 @@ for i = 1, NUM_PLOTS do
 		Vector3.new(  0, 0,  16),
 		Vector3.new( 16, 0,  16),
 	}
-	for si, soff in slotPositions do
+	for si = 1, #slotPositions do
+		local soff = slotPositions[si]
 		part(pm, "Slot_" .. si,
 			Vector3.new(5, 0.2, 5),
 			cf * CFrame.new(soff.X, FLOOR_H / 2 + 0.1, soff.Z),
-			C.neonGreen, { neon = true, t = 0.6 })
+			C.neonGreen, { neon = true, t = 0.5 })
 	end
 
-	-- Plot spawn point (invisible, used for teleport)
+	-- Plot spawn point (invisible, for teleport targeting)
 	part(pm, "PlotSpawn",
 		Vector3.new(4, 0.5, 4),
 		cf * CFrame.new(0, FLOOR_H / 2 + 0.25, -6),
@@ -352,15 +368,17 @@ for i = 1, NUM_PLOTS do
 	local labLight = part(pm, "LabLight",
 		Vector3.new(2, 1, 2),
 		cf * CFrame.new(0, FLOOR_H / 2 + WALL_H - 1, 0),
-		C.neonGreen, { neon = true, t = 0.8 })
-	pointLight(labLight, C.neonGreen, 0.6, 50)
+		C.neonGreen, { neon = true, t = 0.7 })
+	pointLight(labLight, C.neonGreen, 1, 60)
 
 	pm.Parent = plotsF
+	print("[MutationLab]   Plot " .. i .. " built")
 end
 
 -- ================================================================
 --  BUILD CORRIDORS
 -- ================================================================
+print("[MutationLab] Building corridors...")
 local corrF = Instance.new("Folder")
 corrF.Name   = "Corridors"
 corrF.Parent = root
@@ -388,8 +406,9 @@ for i = 1, NUM_PLOTS do
 		cf * CFrame.new(CORR_W / 2 - WALL_T / 2, FLOOR_H / 2 + 2, 0),
 		C.wallDark)
 
-	-- Neon on railings (alternate green / purple per corridor)
-	local neonCol = (i % 2 == 1) and C.neonGreen or C.neonPurple
+	-- Neon on railings (alternating green / purple)
+	local neonCol = C.neonGreen
+	if i % 2 == 0 then neonCol = C.neonPurple end
 
 	part(corrF, "NeonL_" .. i,
 		Vector3.new(WALL_T + 0.1, 0.4, CORR_LEN),
@@ -405,9 +424,9 @@ for i = 1, NUM_PLOTS do
 	part(corrF, "Strip_" .. i,
 		Vector3.new(1, 0.2, CORR_LEN - 4),
 		cf * CFrame.new(0, FLOOR_H / 2 + 0.1, 0),
-		neonCol, { neon = true, t = 0.3 })
+		neonCol, { neon = true, t = 0.2 })
 
-	-- Plot number sign at corridor entrance (on lobby side)
+	-- Entrance sign (at lobby edge, faces lobby)
 	local signPos = Vector3.new(
 		dx * (LOBBY_HALF + 6),
 		BASE_Y + FLOOR_H / 2 + 5,
@@ -416,52 +435,81 @@ for i = 1, NUM_PLOTS do
 	local signCF = CFrame.lookAt(signPos, Vector3.new(0, signPos.Y, 0))
 	local entrSign = part(corrF, "EntranceSign_" .. i,
 		Vector3.new(8, 4, 0.4), signCF, C.signBg)
-	surfaceSign(entrSign, Enum.NormalId.Back, "LAB " .. i, neonCol)
+	surfaceSign(entrSign, Enum.NormalId.Front, "LAB " .. i, neonCol)
 end
+print("[MutationLab] Corridors done.")
 
 -- ================================================================
 --  LIGHTING & ATMOSPHERE
 -- ================================================================
-Lighting.ClockTime      = 0
-Lighting.Brightness     = 0.1
-Lighting.Ambient        = Color3.fromRGB(18, 20, 30)
-Lighting.OutdoorAmbient = Color3.fromRGB(12, 14, 22)
+print("[MutationLab] Configuring lighting...")
+Lighting.ClockTime      = 6
+Lighting.Brightness     = 0.3
+Lighting.Ambient        = Color3.fromRGB(30, 32, 45)
+Lighting.OutdoorAmbient = Color3.fromRGB(22, 24, 35)
 Lighting.GlobalShadows  = true
-Lighting.Technology     = Enum.Technology.ShadowMap
+Lighting.EnvironmentDiffuseScale = 0.5
+Lighting.EnvironmentSpecularScale = 0.5
+
+local ok, err = pcall(function()
+	Lighting.Technology = Enum.Technology.ShadowMap
+end)
+if not ok then
+	print("[MutationLab] ShadowMap not available, using default: " .. tostring(err))
+end
+
 WS.FallenPartsDestroyHeight = -100
 
 taggedEffect("Atmosphere", "LabAtmosphere", {
-	Density = 0.35,
-	Offset  = 0,
-	Color   = Color3.fromRGB(15, 20, 35),
-	Decay   = Color3.fromRGB(10, 15, 30),
+	Density = 0.25,
+	Offset  = 0.25,
+	Color   = Color3.fromRGB(20, 25, 45),
+	Decay   = Color3.fromRGB(15, 20, 40),
 	Glare   = 0,
-	Haze    = 3,
+	Haze    = 2,
 })
 
 taggedEffect("BloomEffect", "LabBloom", {
-	Intensity = 0.4,
-	Size      = 28,
-	Threshold = 0.7,
+	Intensity = 0.5,
+	Size      = 30,
+	Threshold = 0.6,
 })
 
 taggedEffect("ColorCorrectionEffect", "LabCC", {
-	Brightness = 0.02,
+	Brightness = 0.03,
 	Contrast   = 0.1,
-	Saturation = 0.15,
+	Saturation = 0.2,
 	TintColor  = Color3.fromRGB(210, 240, 255),
 })
+print("[MutationLab] Lighting done.")
+
+-- ================================================================
+--  SKY (dark sci-fi background)
+-- ================================================================
+local sky = Instance.new("Sky")
+sky.Name = "LabSky"
+sky:SetAttribute("MutationLab", true)
+sky.CelestialBodiesShown = false
+sky.StarCount = 800
+sky.SkyboxBk = ""
+sky.SkyboxDn = ""
+sky.SkyboxFt = ""
+sky.SkyboxLf = ""
+sky.SkyboxRt = ""
+sky.SkyboxUp = ""
+sky.Parent = Lighting
 
 -- ================================================================
 --  CREATE SCRIPTS
 -- ================================================================
+print("[MutationLab] Creating scripts...")
 
 -- -- ReplicatedStorage/MutationLab/ -- --
 local rsFolder = Instance.new("Folder")
 rsFolder.Name   = "MutationLab"
 rsFolder.Parent = RS
 
--- Config (ModuleScript)
+-- Config ModuleScript
 local configMS = Instance.new("ModuleScript")
 configMS.Name   = "Config"
 configMS.Source = [=[
@@ -495,6 +543,8 @@ local plotEvent = Instance.new("RemoteEvent")
 plotEvent.Name   = "PlotAssigned"
 plotEvent.Parent = rsFolder
 
+print("[MutationLab]   Config + RemoteEvent created in ReplicatedStorage")
+
 -- -- ServerScriptService/MutationLab/ -- --
 local sssFolder = Instance.new("Folder")
 sssFolder.Name   = "MutationLab"
@@ -506,8 +556,8 @@ plotMgrScript.Source = [=[
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 
-local mlFolder    = RS:WaitForChild("MutationLab")
-local Config      = require(mlFolder:WaitForChild("Config"))
+local mlFolder     = RS:WaitForChild("MutationLab")
+local Config       = require(mlFolder:WaitForChild("Config"))
 local PlotAssigned = mlFolder:WaitForChild("PlotAssigned")
 local plotsFolder  = workspace:WaitForChild("MutationLab"):WaitForChild("Plots")
 
@@ -539,7 +589,7 @@ local function updateSign(plotIndex, playerName)
 		status.TextColor3 = Color3.fromRGB(0, 255, 120)
 	else
 		status.Text = "AVAILABLE"
-		status.TextColor3 = Color3.fromRGB(80, 200, 130)
+		status.TextColor3 = Color3.fromRGB(100, 220, 160)
 	end
 end
 
@@ -571,16 +621,19 @@ local function releasePlot(player)
 end
 
 local function teleportToPlot(character, plotIndex)
-	local spawn = plots[plotIndex].model:FindFirstChild("PlotSpawn")
-	if spawn then
-		character:PivotTo(spawn.CFrame + Vector3.new(0, 3, 0))
+	local spawnPart = plots[plotIndex].model:FindFirstChild("PlotSpawn")
+	if spawnPart then
+		character:PivotTo(spawnPart.CFrame + Vector3.new(0, 3, 0))
 	end
 end
 
 Players.PlayerAdded:Connect(function(player)
 	player.CharacterAdded:Connect(function(character)
-		task.wait(0.2)
-		local idx = playerPlots[player] or assignPlot(player)
+		task.wait(0.5)
+		local idx = playerPlots[player]
+		if not idx then
+			idx = assignPlot(player)
+		end
 		if idx and character.Parent then
 			teleportToPlot(character, idx)
 		end
@@ -592,12 +645,16 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 game:BindToClose(function()
-	for p in playerPlots do
-		releasePlot(p)
+	for _, plotData in pairs(plots) do
+		if plotData.owner then
+			releasePlot(plotData.owner)
+		end
 	end
 end)
 ]=]
 plotMgrScript.Parent = sssFolder
+
+print("[MutationLab]   PlotManager created in ServerScriptService")
 
 -- -- StarterPlayerScripts/MutationLab/ -- --
 if SPS then
@@ -608,13 +665,13 @@ if SPS then
 	local plotUI = Instance.new("LocalScript")
 	plotUI.Name   = "PlotUI"
 	plotUI.Source = [=[
-local Players = game:GetService("Players")
+local Players      = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RS = game:GetService("ReplicatedStorage")
+local RS           = game:GetService("ReplicatedStorage")
 
-local player    = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local mlFolder  = RS:WaitForChild("MutationLab")
+local player     = Players.LocalPlayer
+local playerGui  = player:WaitForChild("PlayerGui")
+local mlFolder   = RS:WaitForChild("MutationLab")
 local PlotAssigned = mlFolder:WaitForChild("PlotAssigned")
 
 local gui = Instance.new("ScreenGui")
@@ -649,49 +706,49 @@ bg.Color  = ColorSequence.new(
 bg.Parent = bs
 
 local bText = Instance.new("TextLabel")
-bText.Name                 = "Text"
-bText.Size                 = UDim2.new(1, -20, 1, 0)
-bText.Position             = UDim2.new(0, 10, 0, 0)
+bText.Name                  = "Text"
+bText.Size                  = UDim2.new(1, -20, 1, 0)
+bText.Position              = UDim2.new(0, 10, 0, 0)
 bText.BackgroundTransparency = 1
-bText.TextColor3           = Color3.fromRGB(0, 255, 120)
-bText.Font                 = Enum.Font.GothamBold
-bText.TextSize             = 18
-bText.Text                 = ""
-bText.Parent               = banner
+bText.TextColor3            = Color3.fromRGB(0, 255, 120)
+bText.Font                  = Enum.Font.GothamBold
+bText.TextSize              = 18
+bText.Text                  = ""
+bText.Parent                = banner
 
 -- Persistent indicator
 local indicator = Instance.new("Frame")
-indicator.Name                 = "Indicator"
-indicator.Size                 = UDim2.new(0, 160, 0, 30)
-indicator.Position             = UDim2.new(0, 10, 0, 10)
-indicator.BackgroundColor3     = Color3.fromRGB(12, 12, 22)
+indicator.Name                  = "Indicator"
+indicator.Size                  = UDim2.new(0, 160, 0, 30)
+indicator.Position              = UDim2.new(0, 10, 0, 10)
+indicator.BackgroundColor3      = Color3.fromRGB(12, 12, 22)
 indicator.BackgroundTransparency = 0.3
-indicator.BorderSizePixel      = 0
-indicator.Visible              = false
-indicator.Parent               = gui
+indicator.BorderSizePixel       = 0
+indicator.Visible               = false
+indicator.Parent                = gui
 
 local ic = Instance.new("UICorner")
 ic.CornerRadius = UDim.new(0, 6)
 ic.Parent       = indicator
 
-local is = Instance.new("UIStroke")
-is.Color     = Color3.fromRGB(0, 200, 100)
-is.Thickness = 1
-is.Parent    = indicator
+local iStroke = Instance.new("UIStroke")
+iStroke.Color     = Color3.fromRGB(0, 200, 100)
+iStroke.Thickness = 1
+iStroke.Parent    = indicator
 
 local iText = Instance.new("TextLabel")
-iText.Size                 = UDim2.new(1, -10, 1, 0)
-iText.Position             = UDim2.new(0, 5, 0, 0)
+iText.Size                  = UDim2.new(1, -10, 1, 0)
+iText.Position              = UDim2.new(0, 5, 0, 0)
 iText.BackgroundTransparency = 1
-iText.TextColor3           = Color3.fromRGB(0, 255, 120)
-iText.Font                 = Enum.Font.GothamBold
-iText.TextSize             = 14
-iText.TextXAlignment       = Enum.TextXAlignment.Left
-iText.Text                 = ""
-iText.Parent               = indicator
+iText.TextColor3            = Color3.fromRGB(0, 255, 120)
+iText.Font                  = Enum.Font.GothamBold
+iText.TextSize              = 14
+iText.TextXAlignment        = Enum.TextXAlignment.Left
+iText.Text                  = ""
+iText.Parent                = indicator
 
 local function showBanner(text)
-	bText.Text     = text
+	bText.Text      = text
 	banner.Position = UDim2.new(0.5, -170, 0, -56)
 
 	TweenService:Create(banner,
@@ -714,6 +771,9 @@ PlotAssigned.OnClientEvent:Connect(function(plotIndex)
 end)
 ]=]
 	plotUI.Parent = spsFolder
+	print("[MutationLab]   PlotUI created in StarterPlayerScripts")
+else
+	warn("[MutationLab] StarterPlayerScripts not found — PlotUI skipped")
 end
 
 -- ================================================================
@@ -728,3 +788,6 @@ print("  Scripts ......... Config, PlotManager, PlotUI")
 print("  Events .......... PlotAssigned")
 print("========================================")
 print("Press F5 to play-test, or use Test > Local Server for multiplayer.")
+print("")
+print("TIP: In Edit mode, use Ctrl+Shift+F to toggle fullscreen,")
+print("     then scroll the mouse wheel to zoom out and see the full map.")
