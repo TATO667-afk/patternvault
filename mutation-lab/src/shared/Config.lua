@@ -30,4 +30,50 @@ Config.PLOT_RADIUS = 160
 Config.PLOT_SIZE = 64
 Config.BASE_Y = 10
 
+-- Upgrades: {id, name, desc, maxLevel, baseCost, costMultiplier, icon}
+Config.UPGRADES = {
+	{
+		id = "speed",
+		name = "Mutation Speed",
+		desc = "Reduces mutation time",
+		maxLevel = 5,
+		baseCost = 100,
+		costMult = 2.0,
+		icon = "⚡",
+	},
+	{
+		id = "slots",
+		name = "Extra Slots",
+		desc = "Adds display slots (+1 per level)",
+		maxLevel = 4,
+		baseCost = 200,
+		costMult = 2.5,
+		icon = "📦",
+	},
+	{
+		id = "income",
+		name = "Income Boost",
+		desc = "Multiplies passive income",
+		maxLevel = 5,
+		baseCost = 150,
+		costMult = 2.2,
+		icon = "💰",
+	},
+	{
+		id = "luck",
+		name = "Lucky Mutagen",
+		desc = "Better rarity chances",
+		maxLevel = 5,
+		baseCost = 250,
+		costMult = 2.5,
+		icon = "🍀",
+	},
+}
+
+function Config.getUpgradeCost(upgradeIndex, currentLevel)
+	local u = Config.UPGRADES[upgradeIndex]
+	if not u then return 999999 end
+	return math.floor(u.baseCost * (u.costMult ^ currentLevel))
+end
+
 return Config

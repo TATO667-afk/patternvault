@@ -418,10 +418,210 @@ The `src/` directory contains standalone copies of each script for browsing:
 
 These are identical to the scripts embedded in the installer files.
 
-## Next Steps (Phase 4)
+### Phase 4 — Lab Upgrades & Progression
+- **Upgrade terminals** — purple-themed terminal in each plot with SurfaceGui screen, neon accents, ProximityPrompt
+- **4 upgrade types:**
+  - **Mutation Speed** (max 5) — reduces mutation time by 12% per level (5s → 2s)
+  - **Extra Slots** (max 4) — adds +1 display slot per level (6 → 10)
+  - **Income Boost** (max 5) — multiplies passive income +30% per level (1.0x → 2.5x)
+  - **Lucky Mutagen** (max 5) — shifts rarity weights from Common to higher rarities
+- **Upgrade UI** — center popup panel with purple theme, level progress bars, cost buttons
+- **Server-authoritative** — all purchases validated server-side with cost scaling
+- **Cross-script integration** — UpgradeManager exposes getters via `_G.MutationLabUpgrades`
 
-Phase 4 will add:
-- Lab upgrades (faster mutation, more slots, income multiplier)
-- Upgrade UI and progression system
+## Phase 4 Installation
 
-**Wait for confirmation before proceeding to Phase 4.**
+### Step 6: Run Phase 4 Installer
+
+1. Make sure Phase 1, 2, and 3 are already installed
+2. Open `src/Phase4_Installer.lua` from this repository
+3. **Select all** → **Copy**
+4. **Click** inside the **Command Bar** (thin strip at bottom)
+5. **Paste** → press **Enter**
+
+You should see:
+
+```
+[MutationLab] Phase 4 installer starting...
+[MutationLab] Cleaning previous Phase 4...
+[MutationLab] Creating Phase 4 events...
+[MutationLab] Updating Config...
+[MutationLab] Building upgrade terminals...
+[MutationLab]   Terminal built in Plot 1
+  ...
+[MutationLab]   Terminal built in Plot 8
+[MutationLab] Creating UpgradeManager...
+[MutationLab] Updating MutationManager...
+[MutationLab] Updating IncomeManager...
+[MutationLab] Creating UpgradeUI...
+========================================
+[MutationLab] Phase 4 installed!
+  Upgrade Terminals .. 8
+  New Scripts ........ UpgradeManager, UpgradeUI
+  Updated Scripts .... Config, MutationManager,
+                       IncomeManager
+  New Events ......... UpgradeRequest, UpgradeUpdate
+========================================
+Press F5 to test!
+```
+
+All installers are safe to re-run. If you re-run Phase 2 or 3, re-run Phase 4 after.
+
+### Phase 4 Testing
+
+1. Press **F5**
+2. You spawn and teleport to your lab with 100 Mutagen
+3. Find the **purple Upgrade Terminal** on the left side of your lab
+4. Walk up to it and press **E** — the **upgrade panel** pops up
+5. You'll see 4 upgrade cards: Speed, Slots, Income, Luck
+6. Each shows a level bar (0/5 or 0/4), description, and cost button
+7. Buy **Mutation Speed** (100 Mutagen) — your next mutation takes 4.4s instead of 5s
+8. Earn more Mutagen via creatures, then try **Extra Slots** — a new Slot_7 appears in your lab
+9. Buy **Income Boost** — your passive income multiplied by 1.3x
+10. Buy **Lucky Mutagen** — better chances for rare creatures
+11. Costs increase with each level (baseCost × costMultiplier^level)
+12. Maxed upgrades show "MAXED" button (greyed out)
+
+### What to Verify (Phase 4)
+
+| Feature | Expected Behaviour |
+|---|---|
+| Terminal appearance | Purple terminal with neon accents and "UPGRADES" screen |
+| ProximityPrompt | "Upgrades" prompt when near terminal |
+| Upgrade panel | Center popup with purple theme, 4 upgrade cards |
+| Level bars | Purple fill showing current level / max level |
+| Cost scaling | Each level costs more (baseCost × costMult^level) |
+| Speed upgrade | Mutation animation gets shorter per level |
+| Slots upgrade | New display slot Part appears in lab |
+| Income upgrade | Passive income multiplied (visible in income float) |
+| Luck upgrade | Better rarity odds (test with many mutations) |
+| Maxed state | "MAXED" button when fully upgraded |
+| Close button | X button or clicking overlay closes panel |
+| Insufficient funds | Nothing happens if you can't afford the upgrade |
+| Server validation | All purchases checked server-side |
+
+### Upgrade Cost Table
+
+| Upgrade | Level 1 | Level 2 | Level 3 | Level 4 | Level 5 |
+|---|---|---|---|---|---|
+| Speed (base 100, ×2.0) | 100 | 200 | 400 | 800 | 1,600 |
+| Slots (base 200, ×2.5) | 200 | 500 | 1,250 | 3,125 | — |
+| Income (base 150, ×2.2) | 150 | 330 | 726 | 1,597 | 3,513 |
+| Luck (base 250, ×2.5) | 250 | 625 | 1,562 | 3,906 | 9,765 |
+
+## Architecture (Updated for Phase 4)
+
+### Instance Hierarchy
+
+```
+Workspace
+  MutationLab (Folder)
+    Lobby (Folder) — floor, spawns, pillars, signs
+    Plots (Folder)
+      Plot_1 (Model) [OwnerId attribute]
+        Floor, BackWall, LeftWall, RightWall, FrontLeft, FrontRight
+        BackNeon, LeftNeon, RightNeon, DoorNeonL, DoorNeonR
+        LabSign, StatusSign (SurfaceGui with SignText)
+        MutationMachine (Model)
+          Base, Pedestal, BottomRing, Chamber, ChamberGlow,
+          TopRing, TopCap, Rod_1-4, ControlPanel (SurfaceGui + ProximityPrompt)
+          MutationParticles (ParticleEmitter on ChamberGlow)
+        UpgradeTerminal (Model)
+          Base, Screen (SurfaceGui + ProximityPrompt), AccentStrip, TopBar
+        Slot_1..6 (+ Slot_7..10 via upgrades), PlotSpawn, LabLight
+      Plot_2 ... Plot_8
+    Corridors (Folder) — floors, railings, neon strips, entrance signs
+
+ReplicatedStorage
+  MutationLab (Folder)
+    Config (ModuleScript)
+    CreatureData (ModuleScript)
+    CreatureBuilder (ModuleScript)
+    PlotAssigned (RemoteEvent)
+    MutationStart (RemoteEvent)
+    MutationResult (RemoteEvent)
+    CurrencyUpdate (RemoteEvent)
+    InventoryUpdate (RemoteEvent)
+    PlaceRequest (RemoteEvent)
+    RemoveRequest (RemoteEvent)
+    IncomeNotify (RemoteEvent)
+    UpgradeRequest (RemoteEvent)
+    UpgradeUpdate (RemoteEvent)
+
+ServerScriptService
+  MutationLab (Folder)
+    PlotManager (Script)
+    CurrencyManager (ModuleScript)
+    MutationManager (Script)
+    InventoryManager (ModuleScript)
+    IncomeManager (Script)
+    UpgradeManager (Script)
+
+StarterPlayer/StarterPlayerScripts
+  MutationLab (Folder)
+    PlotUI (LocalScript)
+    MutationClient (LocalScript)
+    InventoryUI (LocalScript)
+    UpgradeUI (LocalScript)
+```
+
+### Scripts
+
+| Script | Type | Location | Purpose |
+|---|---|---|---|
+| Config | ModuleScript | ReplicatedStorage | Shared tuning values (rarity, currency, layout, upgrades) |
+| CreatureData | ModuleScript | ReplicatedStorage | Name generation tables (22 prefixes × 24 suffixes) |
+| CreatureBuilder | ModuleScript | ReplicatedStorage | Procedural creature model builder using Parts |
+| PlotManager | Script | ServerScriptService | Assigns plots, teleports, releases, updates signs, sets OwnerId |
+| CurrencyManager | ModuleScript | ServerScriptService | Server-side balance tracking with client sync |
+| MutationManager | Script | ServerScriptService | Mutation rolls (with luck), speed multiplier, slot placement |
+| InventoryManager | ModuleScript | ServerScriptService | Server-side creature inventory tracking per player |
+| IncomeManager | Script | ServerScriptService | Passive income ticker with income multiplier |
+| UpgradeManager | Script | ServerScriptService | Upgrade purchases, effects, cross-script getters via _G |
+| PlotUI | LocalScript | StarterPlayerScripts | HUD bar (lab + currency), notification banner, income float |
+| MutationClient | LocalScript | StarterPlayerScripts | Mutation animation (color cycling) + rarity reveal popup |
+| InventoryUI | LocalScript | StarterPlayerScripts | Inventory panel with creature cards and Place/Remove buttons |
+| UpgradeUI | LocalScript | StarterPlayerScripts | Upgrade panel with level bars and purchase buttons |
+
+### Remote Events
+
+| Event | Direction | Payload |
+|---|---|---|
+| PlotAssigned | Server → Client | `plotIndex: number` |
+| MutationStart | Server → Client | `plotIndex: number, duration: number` |
+| MutationResult | Server → Client | `creatureData: table, plotIndex: number` |
+| CurrencyUpdate | Server → Client | `amount: number` |
+| InventoryUpdate | Server → Client | `inventory: table` |
+| PlaceRequest | Client → Server | `creatureId: string, slotIndex?: number` |
+| RemoveRequest | Client → Server | `creatureId: string` |
+| IncomeNotify | Server → Client | `amount: number` |
+| UpgradeRequest | Client → Server | `upgradeId: string` |
+| UpgradeUpdate | Server → Client | `upgrades: table` |
+
+## File Reference
+
+The `src/` directory contains standalone copies of each script for browsing:
+
+- `src/shared/Config.lua` — game configuration module (includes upgrade definitions)
+- `src/shared/CreatureData.lua` — creature name generation data
+- `src/shared/CreatureBuilder.lua` — procedural creature model builder
+- `src/server/PlotManager.lua` — server plot management
+- `src/server/CurrencyManager.lua` — server-side currency tracking
+- `src/server/MutationManager.lua` — mutation machine + slot management (with speed/luck upgrades)
+- `src/server/InventoryManager.lua` — server-side creature inventory
+- `src/server/IncomeManager.lua` — passive income ticker (with income multiplier)
+- `src/server/UpgradeManager.lua` — upgrade purchase handling and effect getters
+- `src/client/PlotUI.lua` — HUD, notification, and income float UI
+- `src/client/MutationClient.lua` — mutation animation and rarity reveal
+- `src/client/InventoryUI.lua` — inventory panel with slot management
+- `src/client/UpgradeUI.lua` — upgrade panel with level bars and purchase buttons
+
+These are identical to the scripts embedded in the installer files.
+
+## Next Steps (Phase 5)
+
+Phase 5 will add:
+- DataStore persistence (save/load player data across sessions)
+- Saved upgrades, inventory, and currency
+
+**Wait for confirmation before proceeding to Phase 5.**
