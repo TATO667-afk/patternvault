@@ -237,12 +237,191 @@ The `src/` directory contains standalone copies of each script for browsing:
 
 These are identical to the scripts embedded in the installer files.
 
-## Next Steps (Phase 3)
+### Phase 3 — Inventory, Slots & Passive Income
+- **Creature inventory** — scrollable panel listing all owned creatures with rarity colors
+- **Slot management** — Place/Remove buttons to manage display slots from inventory
+- **Passive income** — displayed creatures earn Mutagen every 10 seconds based on rarity
+- **Income notifications** — floating "+X Mutagen" text on each income tick
+- **Overflow handling** — when all 6 slots are full, new creatures go to inventory with "Open Inventory to place!" prompt
+- **Income rate display** — inventory panel header shows total income per tick
 
-Phase 3 will add:
-- Creature inventory UI (scrollable list of owned creatures)
-- Slot placement/swapping from inventory
-- Passive income system (earn Mutagen over time based on displayed creatures)
-- Income collection UI
+## Phase 3 Installation
 
-**Wait for confirmation before proceeding to Phase 3.**
+### Step 5: Run Phase 3 Installer
+
+1. Make sure Phase 1 and Phase 2 are already installed
+2. Open `src/Phase3_Installer.lua` from this repository
+3. **Select all** → **Copy**
+4. **Click** inside the **Command Bar** (thin strip at bottom)
+5. **Paste** → press **Enter**
+
+You should see:
+
+```
+[MutationLab] Phase 3 installer starting...
+[MutationLab] Cleaning previous Phase 3...
+[MutationLab] Creating Phase 3 events...
+[MutationLab] Updating Config...
+[MutationLab] Creating InventoryManager...
+[MutationLab] Creating IncomeManager...
+[MutationLab] Updating MutationManager...
+[MutationLab] Updating PlotUI...
+[MutationLab] Updating MutationClient...
+[MutationLab] Creating InventoryUI...
+========================================
+[MutationLab] Phase 3 installed!
+  New Scripts ........ InventoryManager, IncomeManager,
+                       InventoryUI
+  Updated Scripts .... Config, MutationManager,
+                       PlotUI, MutationClient
+  New Events ......... InventoryUpdate, PlaceRequest,
+                       RemoveRequest, IncomeNotify
+========================================
+```
+
+All installers are safe to re-run. If you re-run Phase 2, re-run Phase 3 after.
+
+### Phase 3 Testing
+
+1. Press **F5**
+2. You spawn and teleport to your lab with 100 Mutagen
+3. Mutate twice to fill Slot 1 and Slot 2 (costs 100 total)
+4. An **"Inventory (2)"** button appears below the HUD
+5. Click it — the **inventory panel** slides in from the right
+6. You'll see your 2 creatures listed with rarity colors, income values, and "Remove" buttons
+7. The header shows **"Income: +X every 10s"** (sum of slotted creature incomes)
+8. Wait 10 seconds — you'll see **"+X Mutagen"** float up from the HUD as income arrives
+9. Your Mutagen balance increases automatically — mutate again when you can afford it!
+10. Fill all 6 slots — the next mutation shows **"Open Inventory to place!"** and the creature goes to your inventory unplaced
+11. Open inventory, click **"Remove"** on a creature, then click **"Place"** on the new one to swap
+
+### What to Verify (Phase 3)
+
+| Feature | Expected Behaviour |
+|---|---|
+| Inventory button | "Inventory (N)" appears below HUD after first mutation |
+| Inventory panel | Slides in from right, shows all creatures with rarity colors |
+| Place button | Places unslotted creature into next empty display slot |
+| Remove button | Removes creature from slot, model disappears, slot resets |
+| Income tick | Every 10 seconds, slotted creatures earn Mutagen |
+| Income float | "+X Mutagen" text floats up from HUD on income |
+| Income rate | Panel header shows total income rate |
+| Overflow | 7th+ creatures go to inventory unplaced with yellow prompt |
+| Button flash | Inventory button flashes yellow when unplaced creatures exist |
+| Panel close | X button or toggle button closes panel |
+
+### Income Per Rarity
+
+| Rarity | Income Per Tick |
+|---|---|
+| Common | +1 |
+| Rare | +3 |
+| Epic | +8 |
+| Legendary | +20 |
+| Mythic | +50 |
+| Secret | +150 |
+
+## Architecture
+
+### Instance Hierarchy
+
+```
+Workspace
+  MutationLab (Folder)
+    Lobby (Folder) — floor, spawns, pillars, signs
+    Plots (Folder)
+      Plot_1 (Model) [OwnerId attribute]
+        Floor, BackWall, LeftWall, RightWall, FrontLeft, FrontRight
+        BackNeon, LeftNeon, RightNeon, DoorNeonL, DoorNeonR
+        LabSign, StatusSign (SurfaceGui with SignText)
+        MutationMachine (Model)
+          Base, Pedestal, BottomRing, Chamber, ChamberGlow,
+          TopRing, TopCap, Rod_1-4, ControlPanel (SurfaceGui + ProximityPrompt)
+          MutationParticles (ParticleEmitter on ChamberGlow)
+        Slot_1..6, PlotSpawn, LabLight
+      Plot_2 ... Plot_8
+    Corridors (Folder) — floors, railings, neon strips, entrance signs
+
+ReplicatedStorage
+  MutationLab (Folder)
+    Config (ModuleScript)
+    CreatureData (ModuleScript)
+    CreatureBuilder (ModuleScript)
+    PlotAssigned (RemoteEvent)
+    MutationStart (RemoteEvent)
+    MutationResult (RemoteEvent)
+    CurrencyUpdate (RemoteEvent)
+    InventoryUpdate (RemoteEvent)
+    PlaceRequest (RemoteEvent)
+    RemoveRequest (RemoteEvent)
+    IncomeNotify (RemoteEvent)
+
+ServerScriptService
+  MutationLab (Folder)
+    PlotManager (Script)
+    CurrencyManager (ModuleScript)
+    MutationManager (Script)
+    InventoryManager (ModuleScript)
+    IncomeManager (Script)
+
+StarterPlayer/StarterPlayerScripts
+  MutationLab (Folder)
+    PlotUI (LocalScript)
+    MutationClient (LocalScript)
+    InventoryUI (LocalScript)
+```
+
+### Scripts
+
+| Script | Type | Location | Purpose |
+|---|---|---|---|
+| Config | ModuleScript | ReplicatedStorage | Shared tuning values (rarity, currency, layout, mutation, income) |
+| CreatureData | ModuleScript | ReplicatedStorage | Name generation tables (22 prefixes × 24 suffixes) |
+| CreatureBuilder | ModuleScript | ReplicatedStorage | Procedural creature model builder using Parts |
+| PlotManager | Script | ServerScriptService | Assigns plots, teleports, releases, updates signs, sets OwnerId |
+| CurrencyManager | ModuleScript | ServerScriptService | Server-side balance tracking with client sync |
+| MutationManager | Script | ServerScriptService | Mutation rolls, creature placement, slot place/remove handling |
+| InventoryManager | ModuleScript | ServerScriptService | Server-side creature inventory tracking per player |
+| IncomeManager | Script | ServerScriptService | Passive income ticker, awards Mutagen based on displayed creatures |
+| PlotUI | LocalScript | StarterPlayerScripts | HUD bar (lab + currency), notification banner, income float |
+| MutationClient | LocalScript | StarterPlayerScripts | Mutation animation (color cycling) + rarity reveal popup |
+| InventoryUI | LocalScript | StarterPlayerScripts | Inventory panel with creature cards and Place/Remove buttons |
+
+### Remote Events
+
+| Event | Direction | Payload |
+|---|---|---|
+| PlotAssigned | Server → Client | `plotIndex: number` |
+| MutationStart | Server → Client | `plotIndex: number, duration: number` |
+| MutationResult | Server → Client | `creatureData: table, plotIndex: number` |
+| CurrencyUpdate | Server → Client | `amount: number` |
+| InventoryUpdate | Server → Client | `inventory: table` |
+| PlaceRequest | Client → Server | `creatureId: string, slotIndex?: number` |
+| RemoveRequest | Client → Server | `creatureId: string` |
+| IncomeNotify | Server → Client | `amount: number` |
+
+## File Reference
+
+The `src/` directory contains standalone copies of each script for browsing:
+
+- `src/shared/Config.lua` — game configuration module
+- `src/shared/CreatureData.lua` — creature name generation data
+- `src/shared/CreatureBuilder.lua` — procedural creature model builder
+- `src/server/PlotManager.lua` — server plot management
+- `src/server/CurrencyManager.lua` — server-side currency tracking
+- `src/server/MutationManager.lua` — mutation machine + slot management logic
+- `src/server/InventoryManager.lua` — server-side creature inventory
+- `src/server/IncomeManager.lua` — passive income ticker
+- `src/client/PlotUI.lua` — HUD, notification, and income float UI
+- `src/client/MutationClient.lua` — mutation animation and rarity reveal
+- `src/client/InventoryUI.lua` — inventory panel with slot management
+
+These are identical to the scripts embedded in the installer files.
+
+## Next Steps (Phase 4)
+
+Phase 4 will add:
+- Lab upgrades (faster mutation, more slots, income multiplier)
+- Upgrade UI and progression system
+
+**Wait for confirmation before proceeding to Phase 4.**

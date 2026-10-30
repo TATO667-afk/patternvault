@@ -1,5 +1,5 @@
 -- LocalScript: StarterPlayer/StarterPlayerScripts/MutationLab/PlotUI
--- Shows lab assignment banner, persistent HUD with lab indicator + currency display.
+-- HUD bar (lab indicator + currency), notification banner, income float.
 
 local Players = game:GetService("Players")
 local TS = game:GetService("TweenService")
@@ -9,12 +9,13 @@ local pGui = player:WaitForChild("PlayerGui")
 local ml = RS:WaitForChild("MutationLab")
 local PlotAssigned = ml:WaitForChild("PlotAssigned")
 local CurrencyUpdate = ml:WaitForChild("CurrencyUpdate")
+local IncomeNotify = ml:WaitForChild("IncomeNotify")
 
 local gui = Instance.new("ScreenGui")
 gui.Name="PlotUI"; gui.ResetOnSpawn=false
 gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling; gui.Parent=pGui
 
--- HUD Bar (top-left)
+-- HUD Bar
 local hud = Instance.new("Frame")
 hud.Name="HUD"; hud.Size=UDim2.new(0,260,0,34)
 hud.Position=UDim2.new(0,8,0,8)
@@ -72,8 +73,27 @@ PlotAssigned.OnClientEvent:Connect(function(idx)
 	showBanner("Assigned to Lab " .. idx)
 	hud.Visible=true; labLabel.Text="Lab " .. idx
 end)
+
 CurrencyUpdate.OnClientEvent:Connect(function(amount)
 	currLabel.Text="Mutagen: " .. tostring(amount)
 	currLabel.TextColor3=Color3.fromRGB(100,255,180)
 	TS:Create(currLabel,TweenInfo.new(0.4),{TextColor3=Color3.fromRGB(0,230,110)}):Play()
+end)
+
+-- Income float notification
+IncomeNotify.OnClientEvent:Connect(function(amount)
+	local float = Instance.new("TextLabel")
+	float.Size=UDim2.new(0,120,0,24)
+	float.Position=UDim2.new(1,-140,0,-8)
+	float.BackgroundTransparency=1
+	float.TextColor3=Color3.fromRGB(0,255,120)
+	float.Font=Enum.Font.GothamBold; float.TextSize=16
+	float.TextXAlignment=Enum.TextXAlignment.Right
+	float.Text="+" .. amount .. " Mutagen"
+	float.Parent=hud
+	TS:Create(float,TweenInfo.new(1.8,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),
+		{Position=UDim2.new(1,-140,0,-36), TextTransparency=1}):Play()
+	task.delay(2,function()
+		if float.Parent then float:Destroy() end
+	end)
 end)

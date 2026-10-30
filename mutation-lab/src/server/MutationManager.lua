@@ -1,6 +1,6 @@
 -- Script: ServerScriptService/MutationLab/MutationManager
 -- Handles mutation machine interaction, server-authoritative rolls,
--- creature generation, and placement into display slots.
+-- creature generation, placement, and slot management requests.
 
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
@@ -10,8 +10,11 @@ local Config = require(mlFolder:WaitForChild("Config"))
 local CreatureData = require(mlFolder:WaitForChild("CreatureData"))
 local CreatureBuilder = require(mlFolder:WaitForChild("CreatureBuilder"))
 local CM = require(SSS:WaitForChild("MutationLab"):WaitForChild("CurrencyManager"))
+local IM = require(SSS:WaitForChild("MutationLab"):WaitForChild("InventoryManager"))
 local MutationStart = mlFolder:WaitForChild("MutationStart")
 local MutationResult = mlFolder:WaitForChild("MutationResult")
+local PlaceRequest = mlFolder:WaitForChild("PlaceRequest")
+local RemoveRequest = mlFolder:WaitForChild("RemoveRequest")
 local plotsFolder = workspace:WaitForChild("MutationLab"):WaitForChild("Plots")
 local cooldowns = {}
 local mutating = {}
@@ -45,13 +48,23 @@ local function genCreature(ri, rInfo)
 end
 
 local function findSlot(plotModel)
-	for si = 1, 6 do
+	for si = 1, Config.MAX_SLOTS do
 		local slot = plotModel:FindFirstChild("Slot_" .. si)
 		if slot and not slot:FindFirstChildOfClass("Model") then
 			return si, slot
 		end
 	end
 	return nil, nil
+end
+
+local function getPlayerPlot(player)
+	for i = 1, Config.NUM_PLOTS do
+		local plot = plotsFolder:FindFirstChild("Plot_" .. i)
+		if plot and plot:GetAttribute("OwnerId") == player.UserId then
+			return plot
+		end
+	end
+	return nil
 end
 
 local function getPlotFromPrompt(prompt)
@@ -63,11 +76,27 @@ local function getPlotFromPrompt(prompt)
 	return nil
 end
 
+local function placeCreatureModel(cData, slot, rInfo)
+	local creature = CreatureBuilder.build(cData)
+	creature:PivotTo(slot.CFrame + Vector3.new(0, 1.5, 0))
+	creature.Parent = slot
+	slot.Color = rInfo.color
+	slot.Transparency = 0.3
+	return creature
+end
+
+local function resetSlot(slot)
+	for _, child in ipairs(slot:GetChildren()) do
+		if child:IsA("Model") then child:Destroy() end
+	end
+	slot.Color = Color3.fromRGB(0, 200, 120)
+	slot.Transparency = 0.6
+end
+
 local function handleMutation(player, prompt)
 	local plotModel = getPlotFromPrompt(prompt)
 	if not plotModel then return end
-	local ownerId = plotModel:GetAttribute("OwnerId")
-	if ownerId ~= player.UserId then return end
+	if plotModel:GetAttribute("OwnerId") ~= player.UserId then return end
 	if mutating[player] then return end
 	if cooldowns[player] and tick() - cooldowns[player] < CD then return end
 	if not CM.deduct(player, COST) then return end
@@ -84,20 +113,21 @@ local function handleMutation(player, prompt)
 
 	task.delay(DUR, function()
 		local si, slot = findSlot(plotModel)
-		local creature = CreatureBuilder.build(cData)
+		local slotted = false
 		if slot then
-			creature:PivotTo(slot.CFrame + Vector3.new(0, 1.5, 0))
-			creature.Parent = slot
-			slot.Color = rInfo.color
-			slot.Transparency = 0.3
-		else
-			local machine = plotModel:FindFirstChild("MutationMachine")
-			if machine and machine.PrimaryPart then
-				creature:PivotTo(machine.PrimaryPart.CFrame + Vector3.new(6, 3, 0))
-			end
-			creature.Parent = plotModel
+			placeCreatureModel(cData, slot, rInfo)
+			cData.slotIndex = si
+			slotted = true
 		end
-		MutationResult:FireClient(player, cData, plotIdx)
+		IM.addCreature(player, cData)
+		MutationResult:FireClient(player, {
+			id = cData.id,
+			name = cData.name,
+			rarity = cData.rarity,
+			rarityIndex = cData.rarityIndex,
+			income = cData.income,
+			slotted = slotted,
+		}, plotIdx)
 		mutating[player] = false
 		prompt.Enabled = true
 	end)
@@ -124,12 +154,51 @@ task.defer(function()
 	print("[MutationManager] All machines connected")
 end)
 
--- Init currency for joining players
+-- Handle slot placement requests
+PlaceRequest.OnServerEvent:Connect(function(player, creatureId, targetSlot)
+	local plotModel = getPlayerPlot(player)
+	if not plotModel then return end
+	local creature = IM.getCreature(player, creatureId)
+	if not creature then return end
+	if creature.slotIndex then return end
+	local si, slot
+	if targetSlot and type(targetSlot) == "number"
+		and targetSlot >= 1 and targetSlot <= Config.MAX_SLOTS then
+		slot = plotModel:FindFirstChild("Slot_" .. targetSlot)
+		if slot and not slot:FindFirstChildOfClass("Model") then
+			si = targetSlot
+		end
+	end
+	if not si then
+		si, slot = findSlot(plotModel)
+	end
+	if not si or not slot then return end
+	local rInfo = Config.RARITY[creature.rarityIndex]
+	if not rInfo then return end
+	placeCreatureModel(creature, slot, rInfo)
+	IM.setSlot(player, creatureId, si)
+end)
+
+-- Handle slot removal requests
+RemoveRequest.OnServerEvent:Connect(function(player, creatureId)
+	local plotModel = getPlayerPlot(player)
+	if not plotModel then return end
+	local creature = IM.getCreature(player, creatureId)
+	if not creature then return end
+	if not creature.slotIndex then return end
+	local slot = plotModel:FindFirstChild("Slot_" .. creature.slotIndex)
+	if slot then resetSlot(slot) end
+	IM.clearSlot(player, creatureId)
+end)
+
+-- Init
 Players.PlayerAdded:Connect(function(player)
+	IM.init(player)
 	CM.init(player, Config.STARTER_CURRENCY)
 end)
 Players.PlayerRemoving:Connect(function(player)
 	mutating[player] = nil
 	cooldowns[player] = nil
+	IM.cleanup(player)
 	CM.cleanup(player)
 end)
