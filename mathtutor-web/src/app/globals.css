@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --surface-2: #eef0f9;
+  --ink: #1a1d2e;
+  --ink-soft: #565b74;
+  --line: #e1e3f0;
+  --brand: #3f4bd6;
+  --brand-soft: #e7e9fb;
+  --accent: #e08a1e;
+  --accent-soft: #fbeecf;
+  --good: #1f9d6b;
+  --good-soft: #def2e8;
+  --warn: #d2641b;
+  --warn-soft: #fbe7d6;
+  --bad: #d13c4b;
+  --bad-soft: #fbe0e3;
+  --font-head: "Rubik", system-ui, sans-serif;
+  --font-body: "Assistant", system-ui, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12131c; --surface: #1c1e2b; --surface-2: #23263a;
+    --ink: #eef0fa; --ink-soft: #a7acc9; --line: #2e3147;
+    --brand: #8b94ff; --brand-soft: #262a46;
+    --accent: #f0ab4a; --accent-soft: #3a2f1a;
+    --good: #4cd09a; --good-soft: #17322a;
+    --warn: #f0a155; --warn-soft: #3a2a18;
+    --bad: #ef6675; --bad-soft: #3a1e22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12131c; --surface: #1c1e2b; --surface-2: #23263a;
+  --ink: #eef0fa; --ink-soft: #a7acc9; --line: #2e3147;
+  --brand: #8b94ff; --brand-soft: #262a46;
+  --accent: #f0ab4a; --accent-soft: #3a2f1a;
+  --good: #4cd09a; --good-soft: #17322a;
+  --warn: #f0a155; --warn-soft: #3a2a18;
+  --bad: #ef6675; --bad-soft: #3a1e22;
+  color-scheme: dark;
+}
+
+html { direction: rtl; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  margin: 0;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* MathJax: keep equations LTR inside RTL text */
+mjx-container { direction: ltr; margin: 0 !important; }
+mjx-container svg { max-width: 100%; }
+.math-host { direction: ltr; text-align: center; overflow-x: auto; }
+
+@layer components {
+  .card { @apply bg-surface border border-line rounded-xl2 shadow-card; }
+  .btn-primary { @apply font-head font-semibold rounded-xl bg-brand text-white px-5 py-3 inline-flex items-center gap-2 disabled:opacity-50; }
+  .btn-ghost { @apply font-head font-semibold rounded-xl bg-surface2 text-ink px-4 py-2 inline-flex items-center gap-2 disabled:opacity-50; }
+  .input { @apply w-full bg-surface2 border border-line rounded-xl px-3 py-3 text-ink; }
+  .label { @apply block font-head font-semibold text-sm mb-2; }
+  .chip { @apply font-head font-semibold text-xs px-3 py-1 rounded-full; }
+}
